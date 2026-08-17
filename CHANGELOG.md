@@ -2,6 +2,21 @@
 
 All notable changes to PhoenixKitComments will be documented in this file.
 
+## 0.4.2 - 2026-08-17
+
+Empty-content anchor comments for server-created threads (#37).
+
+### Added
+
+- **`create_comment/4` accepts `:allow_empty_content`** — a server-created
+  anchor/topic comment whose visible text lives elsewhere (e.g. an
+  annotation's own label rendered as the thread's decoration) can now skip
+  the content-or-media requirement instead of duplicating that label into
+  the comment body just to pass validation. Read directly off `attrs`
+  before the changeset, the same pattern as `:inserted_at` — server-side
+  callers only. Documented in `create_comment/4`'s doc and added integration
+  coverage — the PR that introduced this shipped with neither.
+
 ## 0.4.1 - 2026-08-17
 
 Comment backdating for server-created anchor comments, and a comment-card UI
