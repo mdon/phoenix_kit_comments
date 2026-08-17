@@ -421,6 +421,14 @@ defmodule PhoenixKitComments do
     `PhoenixKit.Modules.Storage.File` UUIDs to attach to the new comment
     in display order. Comment insert + attachments run in one
     transaction; any attach failure rolls back the comment too.
+    May include `:allow_empty_content` (`true`) to skip the
+    content-or-media requirement — for a server-created anchor/topic
+    comment whose visible text lives elsewhere (e.g. an annotation's own
+    label rendered as the thread's decoration), so the thread doesn't
+    have to duplicate that label into the comment body just to pass
+    validation. Read directly off `attrs` before the changeset, like
+    `:inserted_at` — server-side callers only; never pass user input
+    here.
   """
   def create_comment(resource_type, resource_uuid, user_uuid, attrs) when is_binary(user_uuid) do
     if UUIDUtils.valid?(user_uuid) do
