@@ -44,9 +44,15 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
 
   ## Parent Notifications
 
-  After create/delete, sends to the parent LiveView:
+  After create/edit/delete, sends to the parent LiveView:
 
-      {:comments_updated, %{resource_type: "post", resource_uuid: uuid, action: :created | :deleted}}
+      {:comments_updated, %{resource_type: "post", resource_uuid: uuid, action: :created | :updated | :deleted}}
+
+  The same message (plus `action: :reaction`) arrives over PubSub for
+  changes made elsewhere — `PhoenixKitComments.subscribe/2` — so one
+  `handle_info` clause covers both. A host rendering a preview or count of
+  the resource's comments should reload on ANY action rather than matching
+  a subset.
   """
 
   use PhoenixKitWeb, :live_component
@@ -958,6 +964,19 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
         # already mentioning someone pings nobody, because sync/4 returns
         # what is new and delivery is claimed once.
         sync_mentions(updated, socket.assigns.current_user.uuid)
+
+        # Same host contract as create/delete: a host showing this
+        # resource's latest comments inline must see the new text without
+        # a reload.
+        send(
+          self(),
+          {:comments_updated,
+           %{
+             resource_type: socket.assigns.resource_type,
+             resource_uuid: socket.assigns.resource_uuid,
+             action: :updated
+           }}
+        )
 
         {:noreply,
          socket

@@ -607,7 +607,15 @@ defmodule PhoenixKitComments do
 
   - `comment` - Comment to update
   - `attrs` - Attributes to update (content, status)
+  - `opts` - `:broadcast` (default `true`) — send `{:comments_updated,
+    %{action: :updated}}` on the resource's topic, the same message
+    create/delete send, so a host rendering a preview or count of this
+    resource's comments refreshes. A caller that broadcasts its own,
+    more specific action (`delete_comment/2`) passes `broadcast: false`.
+    `:log` and the actor keys are forwarded to the activity log.
   """
+  @spec update_comment(Comment.t(), map(), keyword()) ::
+          {:ok, Comment.t()} | {:error, Ecto.Changeset.t()}
   def update_comment(%Comment{} = comment, attrs, opts \\ []) do
     # Preload :media so the changeset can infer "has media" when content
     # is being changed. Status-only updates skip the content-or-media
@@ -615,11 +623,23 @@ defmodule PhoenixKitComments do
     # moderation paths if `:media` is already loaded; but we ensure it
     # for content edits because the caller may pass a bare struct from
     # `get_comment/1`.
-    comment
-    |> ensure_media_loaded()
-    |> Comment.changeset(attrs)
-    |> repo().update()
-    |> Activity.log_comment("comments.comment_updated", opts)
+    result =
+      comment
+      |> ensure_media_loaded()
+      |> Comment.changeset(attrs)
+      |> repo().update()
+      |> Activity.log_comment("comments.comment_updated", opts)
+
+    # An edit — of the body or of the status (approve/hide/restore) —
+    # changes what a subscriber shows just as much as a create or delete
+    # does; before this every other session, and any host preview, kept
+    # the old text until a reload.
+    with {:ok, updated} <- result do
+      if Keyword.get(opts, :broadcast, true),
+        do: broadcast_change(updated.resource_type, updated.resource_uuid, :updated)
+
+      {:ok, updated}
+    end
   end
 
   defp ensure_media_loaded(%Comment{media: %Ecto.Association.NotLoaded{}} = comment) do
@@ -636,7 +656,7 @@ defmodule PhoenixKitComments do
   def delete_comment(%Comment{} = comment, opts \\ []) do
     # `update_comment/3` logs its own generic edit; the delete is the
     # meaningful line, so the inner call is left unlogged.
-    case update_comment(comment, %{status: "deleted"}, log: false) do
+    case update_comment(comment, %{status: "deleted"}, log: false, broadcast: false) do
       {:ok, deleted} ->
         notify_resource_handler(
           :on_comment_deleted,
