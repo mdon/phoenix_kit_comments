@@ -2,6 +2,23 @@
 
 All notable changes to PhoenixKitComments will be documented in this file.
 
+## 0.4.3 - 2026-08-24
+
+Comment edits broadcast like creates and deletes (#38).
+
+### Fixed
+
+- **`update_comment/3` now broadcasts `{:comments_updated, %{action: :updated}}`**
+  on the resource's topic after a successful body or status write, the same
+  message create/delete already send. A host rendering a preview or count of
+  the resource's comments (the catalogue item form's supplier rows) kept the
+  old text after an in-place edit until reload, and every other subscribed
+  session did too. `broadcast: false` lets `delete_comment/2` keep sending
+  `:deleted` exactly once. `CommentsComponent` also `send/2`s its host after
+  a successful edit. `subscribe/2` and the README live-update example now
+  list `:updated` alongside create/delete/reaction — the PR that introduced
+  the event left those copy-paste sites on the old three-action set.
+
 ## 0.4.2 - 2026-08-17
 
 Empty-content anchor comments for server-created threads (#37).

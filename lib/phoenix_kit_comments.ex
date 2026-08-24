@@ -53,7 +53,7 @@ defmodule PhoenixKitComments do
 
   ### Comment CRUD
   - `create_comment/4` - Create a comment on a resource
-  - `update_comment/2` - Update a comment
+  - `update_comment/3` - Update a comment
   - `delete_comment/1` - Delete a comment
   - `get_comment/2`, `get_comment!/2` - Get by ID
   - `list_comments/3` - Flat list for a resource
@@ -1666,8 +1666,8 @@ defmodule PhoenixKitComments do
   Subscribes the calling process to a resource's comment activity.
 
   Call this from a LiveView's `mount/3` (in the connected branch) so the
-  view receives cross-session updates when *any* user comments on, deletes
-  from, or reacts to the resource:
+  view receives cross-session updates when *any* user comments on, edits,
+  deletes from, or reacts to the resource:
 
       def mount(_params, _session, socket) do
         if connected?(socket), do: PhoenixKitComments.subscribe("order", order_uuid)
@@ -1675,12 +1675,12 @@ defmodule PhoenixKitComments do
       end
 
       def handle_info({:comments_updated, %{action: action}}, socket) do
-        # action is :created | :deleted | :reaction
+        # action is :created | :updated | :deleted | :reaction
         {:noreply, refresh_comment_badges(socket)}
       end
 
   The broadcast payload mirrors the `{:comments_updated, …}` message the
-  `CommentsComponent` already sends to its own host on create/delete, so a
+  `CommentsComponent` already sends to its own host on create/edit/delete, so a
   host has one message contract for both local and remote updates.
 
   The PubSub server is resolved via `PhoenixKit.PubSubHelper` (configurable

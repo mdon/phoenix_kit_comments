@@ -85,7 +85,7 @@ Handler modules can implement:
 
 `CommentsComponent` keeps the **posting** user's own view fresh automatically.
 To also update *other* connected users (e.g. a comment-count badge or an open
-thread on another screen) when anyone comments, deletes, or reacts, subscribe
+thread on another screen) when anyone comments, edits, deletes, or reacts, subscribe
 the host LiveView to the resource's comment activity:
 
 ```elixir
@@ -98,9 +98,9 @@ def mount(_params, _session, socket) do
   {:ok, socket}
 end
 
-# Fired for create / delete / reaction across every session viewing the resource.
+# Fired for create / edit / delete / reaction across every session viewing the resource.
 def handle_info({:comments_updated, %{resource_type: _, resource_uuid: _, action: action}}, socket) do
-  # action is :created | :deleted | :reaction
+  # action is :created | :updated | :deleted | :reaction
   {:noreply, refresh_comment_counts(socket)}
 end
 ```
@@ -182,8 +182,8 @@ end
 so it composes with a host that already has its own.
 
 ⚠️ **If you write your own `handle_info/2`, give it a catch-all.** The
-component also sends `{:comments_updated, _}` to the host on create and
-delete. LiveView only tolerates unmatched messages when a view exports NO
+component also sends `{:comments_updated, _}` to the host on create, edit,
+and delete. LiveView only tolerates unmatched messages when a view exports NO
 `handle_info/2` — the moment you define one clause, an unmatched message
 raises `FunctionClauseError` and kills the LiveView.
 

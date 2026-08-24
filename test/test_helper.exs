@@ -29,7 +29,7 @@ repo_available =
   try do
     {:ok, _} = TestRepo.start_link()
 
-    # The module broadcasts on create/delete/react. Without a PubSub server
+    # The module broadcasts on create/edit/delete/react. Without a PubSub server
     # `broadcast_change/3` lands in its own rescue, so a test asserting a
     # subscriber receives anything would fail for the wrong reason.
     {:ok, _} = Phoenix.PubSub.Supervisor.start_link(name: PhoenixKit.PubSub)
