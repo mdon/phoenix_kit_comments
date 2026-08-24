@@ -614,6 +614,8 @@ defmodule PhoenixKitComments do
     more specific action (`delete_comment/2`) passes `broadcast: false`.
     `:log` and the actor keys are forwarded to the activity log.
   """
+  @spec update_comment(Comment.t(), map(), keyword()) ::
+          {:ok, Comment.t()} | {:error, Ecto.Changeset.t()}
   def update_comment(%Comment{} = comment, attrs, opts \\ []) do
     # Preload :media so the changeset can infer "has media" when content
     # is being changed. Status-only updates skip the content-or-media
