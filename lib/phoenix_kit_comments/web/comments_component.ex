@@ -158,7 +158,12 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
     socket =
       socket
       |> assign(assigns)
-      |> assign_new(:enabled, fn -> true end)
+      # Defaults to the MODULE's own switch, not to `true`. An admin turning
+      # comments off in settings expects that to reach embedded threads; with
+      # a hardcoded default it only reached the admin pages, and every host
+      # that embedded this component without passing `enabled=` kept taking
+      # writes. A host attr still wins, as an additional off switch.
+      |> assign_new(:enabled, fn -> PhoenixKitComments.enabled?() end)
       |> assign_new(:show_likes, fn -> true end)
       |> assign_new(:title, fn -> gettext("Comments") end)
       # Rich-text (Leaf) editor opt-out. Host attr wins; otherwise the
@@ -202,6 +207,14 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
       |> assign_new(:composer_position, fn -> :top end)
       |> assign_new(:form_extras, fn -> [] end)
       |> assign_new(:current_user, fn -> nil end)
+      # Same reason as :pk_scope above — `user_is_admin?/1` is two `exists?`
+      # queries, and the render path asks it four times per comment,
+      # recursively per reply, so a long thread was hundreds of role queries
+      # per re-render. Reads the SOCKET, not the incoming assigns, because a
+      # send_update may omit `:current_user`.
+      |> then(
+        &assign_new(&1, :viewer_is_admin?, fn -> user_is_admin?(&1.assigns[:current_user]) end)
+      )
       # Optional per-comment decoration registry. Generic surface
       # for rendering an external label above the comment body,
       # driven by one of the comment's `metadata[key]` fields. The
@@ -337,10 +350,7 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
           text
       end
 
-    metadata_params =
-      params
-      |> Map.get("metadata", %{})
-      |> Map.delete("giphy")
+    metadata_params = client_metadata(params, socket)
 
     metadata =
       case socket.assigns.giphy_selected do
@@ -448,7 +458,7 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
   end
 
   @impl true
-  def handle_event("update_comment_draft", %{"comment" => text}, socket) do
+  def handle_event("update_comment_draft", %{"comment" => text}, socket) when is_binary(text) do
     {:noreply, assign(socket, :new_comment, text)}
   end
 
@@ -496,7 +506,7 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
   def handle_event("noop", _params, socket), do: {:noreply, socket}
 
   @impl true
-  def handle_event("giphy_search", %{"value" => query}, socket) do
+  def handle_event("giphy_search", %{"value" => query}, socket) when is_binary(query) do
     # Off the LiveView process. This called out to api.giphy.com INSIDE
     # `handle_event`, so a slow or unreachable Giphy blocked every other
     # event on the page — typing, likes, replies, navigation — for the full
@@ -760,6 +770,33 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
 
   defp find_decoration_for_comment(_, _), do: nil
 
+  # Metadata a CLIENT may set on its own comment.
+  #
+  # Two things are taken away from it. `"giphy"` is ours. And every key the
+  # host registered as a DECORATION is a privilege escalation rather than a
+  # preference: `find_decoration_for_comment/2` picks which host record a
+  # decoration write renames by looking the comment's metadata up in that
+  # map, while `decoration_if_permitted/2` asks only "do you own this
+  # COMMENT?" — which you always do, having just posted it. Without this a
+  # commenter could point a fresh comment at somebody else's annotation
+  # (`metadata[annotation_uuid]=<theirs>`) and rename it through a
+  # `send_update` the host cannot tell from a legitimate one. The link
+  # between a comment and a host record is the host's to make server-side,
+  # never a client's to claim.
+  defp client_metadata(params, socket) do
+    case Map.get(params, "metadata") do
+      # `metadata=foo` rather than `metadata[k]=v` arrives as a binary and
+      # used to raise BadMapError before any validation ran.
+      %{} = metadata ->
+        metadata
+        |> Map.delete("giphy")
+        |> Map.drop(Map.keys(socket.assigns[:comment_decorations] || %{}))
+
+      _ ->
+        %{}
+    end
+  end
+
   # Label for a comment's matching decoration, or "" when none. Kept
   # separate so the edit_comment handler doesn't nest a case inside its
   # permission `if` (Credo max nesting depth).
@@ -779,6 +816,13 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
       comment -> find_decoration_for_comment(comment, socket.assigns.comment_decorations)
     end
   end
+
+  # Every id reaching here comes from a client payload, so it can be
+  # anything. `to_string/1` below raises Protocol.UndefinedError on a map,
+  # which takes the host LiveView down with it — and four handlers
+  # (toggle_like, toggle_dislike, reply_to, begin_decoration_edit) hand
+  # their id straight to this function. One clause closes all of them.
+  defp find_comment_in_tree(_comments, uuid) when not is_binary(uuid), do: nil
 
   defp find_comment_in_tree([], _uuid), do: nil
 
@@ -1369,8 +1413,9 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
           <%!-- revealed on hover (focus-within keeps an OPEN menu and     --%>
           <%!-- keyboard users visible) so a card at rest is just          --%>
           <%!-- author / body / reactions.                                  --%>
-          <%= if can_edit_comment?(@current_user, @comment) or
-                can_delete_comment?(@current_user, @comment) do %>
+          <% may_edit = can_edit_comment?(@current_user, @comment, @ctx.viewer_is_admin?) %>
+          <% may_delete = can_delete_comment?(@current_user, @comment, @ctx.viewer_is_admin?) %>
+          <%= if may_edit or may_delete do %>
             <div class="dropdown dropdown-end ml-auto shrink-0 opacity-0 group-hover/comment:opacity-100 focus-within:opacity-100 transition-opacity">
               <div
                 tabindex="0"
@@ -1390,7 +1435,7 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
                 <%!-- open. Blurring on click closes it the moment an action   --%>
                 <%!-- is chosen (before the data-confirm dialog, which is      --%>
                 <%!-- fine either way the user answers).                       --%>
-                <li :if={can_edit_comment?(@current_user, @comment)}>
+                <li :if={may_edit}>
                   <button
                     phx-click="edit_comment"
                     phx-value-id={@comment.uuid}
@@ -1400,9 +1445,10 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
                     <.icon name="hero-pencil-square" class="w-4 h-4" /> {gettext("Edit")}
                   </button>
                 </li>
-                <li :if={can_delete_comment?(@current_user, @comment)}>
+                <li :if={may_delete}>
                   <button
                     phx-click="delete_comment"
+                    phx-disable-with={gettext("Deleting...")}
                     phx-value-id={@comment.uuid}
                     phx-target={@myself}
                     class="text-error"
@@ -1819,17 +1865,29 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
     end
   end
 
+  # Two arities on purpose. The 2-arity form is the AUTHORIZATION boundary,
+  # called once per event from the handlers, and resolves the role itself.
+  # The 3-arity form takes an already-resolved `admin?` and is what the
+  # RENDER path uses: `user_is_admin?/1` is two `exists?` queries, and
+  # render_comment/1 recurses per reply and asks four times per comment, so
+  # a fifty-comment thread was hundreds of role queries on every re-render.
+  # Same reasoning as `:pk_scope` above — resolve once per render, not once
+  # per comment.
   defp can_edit_comment?(nil, _comment), do: false
 
-  defp can_edit_comment?(user, comment) do
-    user.uuid == comment.user_uuid or user_is_admin?(user)
-  end
+  defp can_edit_comment?(user, comment),
+    do: can_edit_comment?(user, comment, user_is_admin?(user))
+
+  defp can_edit_comment?(nil, _comment, _admin?), do: false
+  defp can_edit_comment?(user, comment, admin?), do: user.uuid == comment.user_uuid or admin?
 
   defp can_delete_comment?(nil, _comment), do: false
 
-  defp can_delete_comment?(user, comment) do
-    user.uuid == comment.user_uuid or user_is_admin?(user)
-  end
+  defp can_delete_comment?(user, comment),
+    do: can_delete_comment?(user, comment, user_is_admin?(user))
+
+  defp can_delete_comment?(nil, _comment, _admin?), do: false
+  defp can_delete_comment?(user, comment, admin?), do: user.uuid == comment.user_uuid or admin?
 
   defp user_is_admin?(nil), do: false
 

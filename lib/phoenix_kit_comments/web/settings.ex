@@ -242,7 +242,14 @@ defmodule PhoenixKitComments.Web.Settings do
     rescue
       e ->
         require Logger
-        Logger.error("Comment settings save failed: #{Exception.message(e)}")
+
+        # The struct name only. This loop writes comments_giphy_api_key among
+        # other settings, and Ecto/DBConnection exceptions in this class
+        # (ChangeError, EncodeError, CastError) interpolate the offending
+        # VALUE into their message — so logging Exception.message/1 here could
+        # put the API key in plaintext in the log. Same stance the Giphy call
+        # site already takes.
+        Logger.error("Comment settings save failed: #{inspect(e.__struct__)}")
 
         {:noreply,
          assign(socket, :saving, false)

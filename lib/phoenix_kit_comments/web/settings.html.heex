@@ -280,6 +280,7 @@
             <button
               type="button"
               phx-click="reset_defaults"
+                    phx-disable-with={gettext("Resetting...")}
               class="btn btn-outline"
               data-confirm={
                 gettext(
@@ -443,6 +444,7 @@
                           <button
                             type="button"
                             phx-click="remove_resource_path"
+                    phx-disable-with={gettext("Removing...")}
                             phx-value-type={resource_type}
                             class="btn btn-ghost btn-xs text-error"
                             data-confirm={
@@ -549,6 +551,7 @@
                       <button
                         type="button"
                         phx-click="remove_resource_path"
+                    phx-disable-with={gettext("Removing...")}
                         phx-value-type={resource_type}
                         class="btn btn-ghost btn-xs text-error"
                         data-confirm={

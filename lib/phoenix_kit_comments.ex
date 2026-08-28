@@ -98,6 +98,11 @@ defmodule PhoenixKitComments do
     Settings.get_boolean_setting("comments_enabled", false)
   rescue
     _ -> false
+  catch
+    # A settings read against an unowned checkout raises, but against a DEAD
+    # pool it exits — and this is the guard the whole module's "the database
+    # may not be there" story rests on.
+    :exit, _ -> false
   end
 
   @impl PhoenixKit.Module
@@ -429,6 +434,15 @@ defmodule PhoenixKitComments do
 
   Automatically calculates depth from parent. Invokes resource handler callback
   if configured.
+
+  > #### `:status` is server-side only {: .warning}
+  >
+  > An explicit `:status` in `attrs` overrides the moderation default, so a
+  > host that forwards raw user params into this function lets a commenter
+  > send `status: "published"` and skip the queue entirely. Treat it like
+  > `:inserted_at` and `:allow_empty_content`: set it from your own code, and
+  > never from anything a client can influence. `:depth` needs no such care —
+  > it is always recomputed from the parent here.
 
   ## Parameters
 
@@ -1038,7 +1052,10 @@ defmodule PhoenixKitComments do
   @doc "Sets a comment's status to published."
   def approve_comment(%Comment{} = comment, opts \\ []) do
     comment
-    |> update_comment(%{status: "published"}, opts)
+    # `log: false` so this writes ONE audit row, not a
+    # `comments.comment_updated` from the inner call plus the approval.
+    # restore_comment/2 and delete_comment/2 already did this.
+    |> update_comment(%{status: "published"}, Keyword.put(opts, :log, false))
     |> Activity.log_comment("comments.comment_approved", opts)
   end
 
@@ -1063,7 +1080,7 @@ defmodule PhoenixKitComments do
   @doc "Sets a comment's status to hidden."
   def hide_comment(%Comment{} = comment, opts \\ []) do
     comment
-    |> update_comment(%{status: "hidden"}, opts)
+    |> update_comment(%{status: "hidden"}, Keyword.put(opts, :log, false))
     |> Activity.log_comment("comments.comment_hidden", opts)
   end
 
@@ -1481,10 +1498,20 @@ defmodule PhoenixKitComments do
         Map.put(attrs, :depth, 0)
 
       parent_uuid ->
-        case repo().get(Comment, parent_uuid) do
-          nil -> Map.put(attrs, :depth, 0)
-          parent -> Map.put(attrs, :depth, (parent.depth || 0) + 1)
-        end
+        Map.put(attrs, :depth, depth_below(parent_uuid))
+    end
+  end
+
+  # Validity first: `repo().get/2` on a malformed uuid raises
+  # Ecto.Query.CastError, so a bad `parent_uuid` crashed the caller instead of
+  # coming back as a changeset error. Leaving it unresolved lets the insert
+  # fail properly on the cast/FK.
+  defp depth_below(parent_uuid) do
+    with true <- UUIDUtils.valid?(parent_uuid),
+         %Comment{} = parent <- repo().get(Comment, parent_uuid) do
+      (parent.depth || 0) + 1
+    else
+      _ -> 0
     end
   end
 
@@ -1755,6 +1782,13 @@ defmodule PhoenixKitComments do
     error ->
       Logger.debug("Comment change broadcast skipped: #{inspect(error)}")
       :ok
+  catch
+    # An unstarted PubSub raises; a DEAD one exits on the registry lookup.
+    # This guard exists so a missing PubSub cannot break the write path, and
+    # without this clause it only half did.
+    :exit, reason ->
+      Logger.debug("Comment change broadcast skipped: #{inspect(reason)}")
+      :ok
   end
 
   # After a reaction toggle that actually changed state, broadcast the change
@@ -1830,6 +1864,15 @@ defmodule PhoenixKitComments do
   rescue
     error ->
       Logger.warning("Comment resource handler error: #{inspect(error)}")
+      :ok
+  catch
+    # This applies/3 arbitrary HOST code, and it runs after the comment has
+    # already committed. A handler doing a GenServer.call to a dead process
+    # exits rather than raising, and the exit propagates out of
+    # create_comment/4 and kills the LiveView — leaving the user looking at a
+    # crashed page for a comment that was saved fine.
+    :exit, reason ->
+      Logger.warning("Comment resource handler exited: #{inspect(reason)}")
       :ok
   end
 

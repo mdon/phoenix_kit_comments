@@ -298,7 +298,7 @@
               </.table_default_cell>
               <.table_default_cell>
                 <span class={status_badge_class(comment.status)}>
-                  {comment.status}
+                  {status_label(comment.status)}
                 </span>
               </.table_default_cell>
               <.table_default_cell>
@@ -365,7 +365,7 @@
           </span>
           <span class="text-base-content/30">·</span>
           <span>{Calendar.strftime(@viewing_comment.inserted_at, "%b %d, %Y")}</span>
-          <span class={status_badge_class(@viewing_comment.status)}>{@viewing_comment.status}</span>
+          <span class={status_badge_class(@viewing_comment.status)}>{status_label(@viewing_comment.status)}</span>
         </div>
 
         <div class="mb-3">

@@ -699,13 +699,17 @@ defmodule PhoenixKitComments.Web.Index do
   # comments carry the back-reference in `metadata["annotation_uuid"]`).
   defp link_with_annotation(url, %{resource_type: "file", metadata: metadata})
        when is_map(metadata) do
-    case Map.get(metadata, "annotation_uuid") do
-      uuid when is_binary(uuid) and uuid != "" ->
-        sep = if String.contains?(url, "?"), do: "&", else: "?"
-        url <> sep <> "annotation=" <> uuid
-
-      _ ->
-        url
+    # Cast, don't just check for a non-empty string. This metadata is
+    # free-form JSONB the client sets at create time, and the result goes
+    # into an href the ADMIN clicks — so `annotation_uuid=x&status=published`
+    # (or a `#fragment`) would ride along as extra query params on the target
+    # page. Only a real uuid can be appended.
+    with uuid when is_binary(uuid) <- Map.get(metadata, "annotation_uuid"),
+         {:ok, valid} <- Ecto.UUID.cast(uuid) do
+      sep = if String.contains?(url, "?"), do: "&", else: "?"
+      url <> sep <> "annotation=" <> valid
+    else
+      _ -> url
     end
   end
 
@@ -717,12 +721,26 @@ defmodule PhoenixKitComments.Web.Index do
   defp status_badge_class("deleted"), do: "badge badge-error badge-sm"
   defp status_badge_class(_), do: "badge badge-ghost badge-sm"
 
+  # Literal `gettext/1` per clause, because the extractor only sees literals —
+  # the msgids already exist and are already translated, since the stat tiles
+  # and the filter dropdown on this very page use them. The badge printed the
+  # raw DB enum instead, so a Russian admin saw the filter say
+  # "Опубликовано" and the badge next to it say "published".
+  defp status_label("published"), do: gettext("Published")
+  defp status_label("pending"), do: gettext("Pending")
+  defp status_label("hidden"), do: gettext("Hidden")
+  defp status_label("deleted"), do: gettext("Deleted")
+  defp status_label(other), do: other
+
   # The core card renders a `card_fields` entry's `value` as safe HTML, so the
   # grid view can show the same status badge as the table column instead of a
   # bare string. `status` is a fixed enum, but escape the label defensively.
   defp status_badge_value(status) do
     status = to_string(status)
-    text = status |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
+
+    text =
+      status |> status_label() |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
+
     Phoenix.HTML.raw(~s(<span class="#{status_badge_class(status)}">#{text}</span>))
   end
 end
