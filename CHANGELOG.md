@@ -2,7 +2,27 @@
 
 All notable changes to PhoenixKitComments will be documented in this file.
 
-## 0.4.3 - 2026-08-24
+## 0.4.4 - 2026-08-28
+
+Comment forms get stable DOM ids so LiveView can recover them after a
+disconnect (#40).
+
+### Fixed
+
+- **The composer, comment-edit, and decoration-edit `<.form>`s in
+  `CommentsComponent` now render an `id`.** `<.form for={%{}}>` (used by all
+  three) supplies no id of its own — only `for={@changeset}` does — so
+  LiveView silently disabled form recovery for them: a comment half-typed
+  when the socket dropped was lost on reconnect instead of restored. Surfaced
+  as `Detected a form with phx-change but missing id` warnings in a host
+  app's test suite. Each id is keyed to the component's own `@myself` plus
+  what distinguishes the form (composer position/comment uuid, or comment
+  uuid alone for edit/decoration) so multiple instances of this component,
+  or multiple open comments, can't collide.
+
+### Changed
+
+- Dependency lockfile refresh (no source changes).
 
 Comment edits broadcast like creates and deletes (#38).
 
