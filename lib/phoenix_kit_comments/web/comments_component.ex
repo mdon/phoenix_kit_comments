@@ -1434,7 +1434,7 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
             <%= if @decoration_editing? do %>
               <.form
                 for={%{}}
-                id={"decoration-form-#{@comment.uuid}"}
+                id={"decoration-form-#{@myself}-#{@comment.uuid}"}
                 phx-submit="save_decoration"
                 phx-target={@myself}
                 class="flex items-center gap-2"
@@ -1499,7 +1499,7 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
         <%= if @editing_uuid == @comment.uuid do %>
           <.form
             for={%{}}
-            id={"comment-edit-form-#{@comment.uuid}"}
+            id={"comment-edit-form-#{@myself}-#{@comment.uuid}"}
             phx-submit="save_edit"
             phx-target={@myself}
             class="space-y-2"
