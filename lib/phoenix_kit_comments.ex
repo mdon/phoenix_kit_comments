@@ -396,6 +396,30 @@ defmodule PhoenixKitComments do
   @impl PhoenixKit.Module
   def css_sources, do: [:phoenix_kit_comments]
 
+  @impl PhoenixKit.Module
+  def js_sources do
+    # A hook has to be in the host's LiveSocket when it is CONSTRUCTED. These
+    # two used to register themselves from an inline <script> in the component
+    # and settings templates, which works on a hard page load — the script runs
+    # during HTML parse, before app.js snapshots window.PhoenixKitHooks — and
+    # silently does nothing on a LiveView NAVIGATION, because morphdom never
+    # executes an inserted <script> and the hooks map is already fixed.
+    # Verified on a dev box: navigating to Settings → Comments logged
+    # `unknown hook found for "InsertAtCursor"` four times and the
+    # template-variable inserter was dead.
+    #
+    # Hook names are namespaced because the final fold is last-write-wins
+    # across every module's bundle AND core's own hooks (see the callback's
+    # docs) — `InsertAtCursor` was generic enough to collide.
+    [
+      %{
+        app: :phoenix_kit_comments,
+        file: "static/assets/phoenix_kit_comments.js",
+        global: "PhoenixKitCommentsHooks"
+      }
+    ]
+  end
+
   # ============================================================================
   # Comment CRUD
   # ============================================================================

@@ -141,12 +141,7 @@ defmodule PhoenixKitComments.Web.Index do
   def handle_event("approve", %{"uuid" => uuid}, socket) do
     with :ok <- check_authorization(socket),
          %Comment{} = comment <- PhoenixKitComments.get_comment(uuid) do
-      # Restoring publishes only where publishing is the default. With
-      # moderation ON, a restored comment goes back to the queue rather than
-      # straight onto the page — `approve_comment/2` unconditionally
-      # published, so restoring something that had never been approved
-      # published it as a side effect of undoing a delete.
-      PhoenixKitComments.restore_comment(comment, actor_opts(socket))
+      PhoenixKitComments.approve_comment(comment, actor_opts(socket))
 
       {:noreply,
        socket
@@ -193,12 +188,19 @@ defmodule PhoenixKitComments.Web.Index do
     end
   end
 
-  # Revert a soft-deletion — brings the comment back as published.
+  # Revert a soft-deletion. Restoring publishes only where publishing is the
+  # default: with moderation ON the comment goes back to the queue rather than
+  # straight onto the page, because "undo a delete" must not also mean
+  # "approve" something that was never approved. That is `restore_comment/2`'s
+  # whole job — this handler called `approve_comment/2` instead, which
+  # publishes unconditionally, so it re-introduced exactly the bug
+  # `restore_comment/2` exists to prevent (and, symmetrically, Approve called
+  # `restore_comment/2` and did nothing at all under moderation).
   @impl true
   def handle_event("restore", %{"uuid" => uuid}, socket) do
     with :ok <- check_authorization(socket),
          %Comment{} = comment <- PhoenixKitComments.get_comment(uuid) do
-      PhoenixKitComments.approve_comment(comment, actor_opts(socket))
+      PhoenixKitComments.restore_comment(comment, actor_opts(socket))
 
       {:noreply,
        socket

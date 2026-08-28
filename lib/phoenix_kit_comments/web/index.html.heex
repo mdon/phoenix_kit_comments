@@ -74,7 +74,7 @@
             <option value="">{gettext("All Types")}</option>
             <%= for rt <- @resource_types do %>
               <option value={rt} selected={@filter_resource_type == rt}>
-                {String.capitalize(rt)}
+                {humanize_resource_type(rt)}
               </option>
             <% end %>
           </select>
@@ -142,7 +142,7 @@
               <option value="">{gettext("All Types")}</option>
               <%= for rt <- @resource_types do %>
                 <option value={rt} selected={@filter_resource_type == rt}>
-                  {String.capitalize(rt)}
+                  {humanize_resource_type(rt)}
                 </option>
               <% end %>
             </select>
