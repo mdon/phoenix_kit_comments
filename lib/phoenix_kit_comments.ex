@@ -869,7 +869,17 @@ defmodule PhoenixKitComments do
 
     Map.new(uuids, fn uuid -> {uuid, Map.get(counts, uuid, 0)} end)
   rescue
-    _ -> Map.new(Enum.uniq(resource_uuids), &{&1, 0})
+    error ->
+      # Same reasoning as count_replies/2: zeros keep a listing rendering, but
+      # "0 comments" on a resource that has them is a plausible-looking wrong
+      # answer rather than an obviously broken one, so it has to leave a trace.
+      Logger.warning(
+        "PhoenixKitComments.count_comments/3 failed, reporting 0 for " <>
+          "#{length(Enum.uniq(resource_uuids))} #{resource_type} resources: " <>
+          Exception.message(error)
+      )
+
+      Map.new(Enum.uniq(resource_uuids), &{&1, 0})
   end
 
   def count_comments(resource_type, resource_uuid, opts) do
@@ -885,7 +895,13 @@ defmodule PhoenixKitComments do
 
     repo().aggregate(query, :count)
   rescue
-    _ -> 0
+    error ->
+      Logger.warning(
+        "PhoenixKitComments.count_comments/3 failed, reporting 0 for " <>
+          "#{resource_type} #{inspect(resource_uuid)}: " <> Exception.message(error)
+      )
+
+      0
   end
 
   defp apply_status_filter(query, nil, false), do: where(query, [c], c.status != "deleted")
@@ -1583,7 +1599,13 @@ defmodule PhoenixKitComments do
     query = if status, do: where(query, [c], c.status == ^status), else: query
     repo().aggregate(query, :count)
   rescue
-    _ -> 0
+    error ->
+      Logger.warning(
+        "PhoenixKitComments.count_all_comments/1 failed, reporting 0" <>
+          " (status=#{inspect(Keyword.get(opts, :status))}): " <> Exception.message(error)
+      )
+
+      0
   end
 
   defp maybe_filter_by_user(query, nil), do: query
