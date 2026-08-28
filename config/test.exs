@@ -46,3 +46,17 @@ config :phoenix_kit_comments, PhoenixKitComments.Test.Repo,
 # call in the module falls into its own rescue and returns a plausible
 # nothing, which is exactly how several tests came to assert the rescue.
 config :phoenix_kit, repo: PhoenixKitComments.Test.Repo
+
+# Endpoint for the LiveView test suite (test/support/test_endpoint.ex). The
+# module is a library and borrows the host's endpoint in production; this one
+# exists so `Phoenix.LiveViewTest` can drive the admin LiveViews.
+config :phoenix_kit_comments, PhoenixKitComments.Test.Endpoint,
+  url: [host: "localhost"],
+  secret_key_base: String.duplicate("a", 64),
+  render_errors: [
+    formats: [html: PhoenixKitComments.Test.Layouts],
+    layout: false
+  ],
+  pubsub_server: PhoenixKit.PubSub,
+  live_view: [signing_salt: "comments-test-salt"],
+  server: false
