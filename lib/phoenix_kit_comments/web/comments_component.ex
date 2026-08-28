@@ -1434,6 +1434,7 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
             <%= if @decoration_editing? do %>
               <.form
                 for={%{}}
+                id={"decoration-form-#{@comment.uuid}"}
                 phx-submit="save_decoration"
                 phx-target={@myself}
                 class="flex items-center gap-2"
@@ -1496,7 +1497,13 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
 
         <%!-- Comment Content (or Edit Form) --%>
         <%= if @editing_uuid == @comment.uuid do %>
-          <.form for={%{}} phx-submit="save_edit" phx-target={@myself} class="space-y-2">
+          <.form
+            for={%{}}
+            id={"comment-edit-form-#{@comment.uuid}"}
+            phx-submit="save_edit"
+            phx-target={@myself}
+            class="space-y-2"
+          >
             <%!-- When this comment has a decoration with an `on_save`    --%>
             <%!-- action, the edit form opens label + body together.      --%>
             <%!-- Save writes both: comment content through the normal    --%>
@@ -1957,6 +1964,7 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
     ~H"""
     <.form
       for={%{}}
+      id={"comment-composer-#{@ctx.myself}-#{@suffix}"}
       phx-submit="add_comment"
       phx-change="update_comment_draft"
       phx-target={@ctx.myself}
