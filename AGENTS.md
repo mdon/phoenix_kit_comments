@@ -135,7 +135,7 @@ Four statuses as strings:
 - **Navigation paths**: always use `PhoenixKit.Utils.Routes.path/1`, never relative paths
 - **`enabled?/0`**: must rescue errors and return `false` as fallback (DB may not be available)
 - **LiveViews use `PhoenixKitWeb` macros** — use `use PhoenixKitWeb, :live_view` (not `use Phoenix.LiveView` directly)
-- **JavaScript hooks**: must be inline `<script>` tags; register on `window.PhoenixKitHooks`
+- **JavaScript hooks**: ship in `priv/static/assets/phoenix_kit_comments.js`, assigned onto `window.PhoenixKitCommentsHooks`, and declared by `js_sources/0`. **Never an inline `<script>`** — a hook must be in the host's `LiveSocket` when it is *constructed*, and an inline script only manages that on a hard page load. On a LiveView navigation morphdom does not execute inserted `<script>` tags, so the hook is simply absent and the console reads `unknown hook found for "…"`. Namespace hook names (`PhoenixKitCommentsAudioRecorder`, not `AudioRecorder`): the fold into `window.PhoenixKitHooks` is last-write-wins across every module's bundle *and* core's own hooks
 - **LiveView assigns** available in admin pages: `@phoenix_kit_current_scope`, `@current_locale`, `@url_path`
 - **UUIDv7 primary keys** — all tables use `uuid_generate_v7()`, never `gen_random_uuid()`
 - **Admin routing** — plugin LiveView routes are auto-discovered by PhoenixKit and compiled into `live_session :phoenix_kit_admin`. Never hand-register them in a parent app's `router.ex`; use `live_view:` on a tab or a route module. See `phoenix_kit/guides/custom-admin-pages.md` for the authoritative reference
@@ -189,7 +189,7 @@ Review template should use severity levels: `BUG - CRITICAL`, `BUG - HIGH`, `BUG
 
 ## External Dependencies
 
-- **PhoenixKit** (path: `"../phoenix_kit"`) — Module behaviour, Settings API, shared components, RepoHelper, Utils (Date, UUID, Routes), Users.Auth.User, Users.Roles
+- **PhoenixKit** (`~> 2.0` from Hex; override with `PHOENIX_KIT_PATH=../phoenix_kit` for cross-repo work) — Module behaviour, Settings API, shared components, RepoHelper, Utils (Date, UUID, Routes), Users.Auth.User, Users.Roles
 - **Phoenix LiveView** (`~> 1.0`) — Admin LiveViews and CommentsComponent
 - **ex_doc** (`~> 0.34`, dev only) — Documentation generation
 - **credo** (`~> 1.7`, dev/test) — Static analysis

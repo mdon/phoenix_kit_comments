@@ -141,12 +141,7 @@ defmodule PhoenixKitComments.Web.Index do
   def handle_event("approve", %{"uuid" => uuid}, socket) do
     with :ok <- check_authorization(socket),
          %Comment{} = comment <- PhoenixKitComments.get_comment(uuid) do
-      # Restoring publishes only where publishing is the default. With
-      # moderation ON, a restored comment goes back to the queue rather than
-      # straight onto the page — `approve_comment/2` unconditionally
-      # published, so restoring something that had never been approved
-      # published it as a side effect of undoing a delete.
-      PhoenixKitComments.restore_comment(comment, actor_opts(socket))
+      PhoenixKitComments.approve_comment(comment, actor_opts(socket))
 
       {:noreply,
        socket
@@ -193,12 +188,19 @@ defmodule PhoenixKitComments.Web.Index do
     end
   end
 
-  # Revert a soft-deletion — brings the comment back as published.
+  # Revert a soft-deletion. Restoring publishes only where publishing is the
+  # default: with moderation ON the comment goes back to the queue rather than
+  # straight onto the page, because "undo a delete" must not also mean
+  # "approve" something that was never approved. That is `restore_comment/2`'s
+  # whole job — this handler called `approve_comment/2` instead, which
+  # publishes unconditionally, so it re-introduced exactly the bug
+  # `restore_comment/2` exists to prevent (and, symmetrically, Approve called
+  # `restore_comment/2` and did nothing at all under moderation).
   @impl true
   def handle_event("restore", %{"uuid" => uuid}, socket) do
     with :ok <- check_authorization(socket),
          %Comment{} = comment <- PhoenixKitComments.get_comment(uuid) do
-      PhoenixKitComments.approve_comment(comment, actor_opts(socket))
+      PhoenixKitComments.restore_comment(comment, actor_opts(socket))
 
       {:noreply,
        socket
@@ -248,24 +250,39 @@ defmodule PhoenixKitComments.Web.Index do
     if uuids == [] do
       {:noreply, put_flash(socket, :error, gettext("No comments selected"))}
     else
-      {status, label} =
-        case action do
-          "approve" -> {"published", gettext("approved")}
-          "hide" -> {"hidden", gettext("hidden")}
-          "delete" -> {"deleted", gettext("deleted")}
-        end
+      opts = actor_opts(socket)
 
-      # `bulk_update_status/2` returns `{ok_count, error_count}` and all three
-      # branches used to throw it away and flash success unconditionally — so
-      # a bulk action where every row failed reported "Comments approved".
-      {ok_count, err_count} =
-        PhoenixKitComments.bulk_update_status(uuids, status, actor_opts(socket))
+      # Each bulk action goes through the SAME context function as its
+      # single-row menu item. Writing the status directly (the old
+      # `bulk_update_status(uuids, "published")`) skipped the moderation
+      # semantics that live in `approve_comment/2` and `hide_comment/2`: it
+      # logged `comment_updated` instead of the moderation action, and bulk
+      # Approve published deleted comments — the very thing the single-row
+      # menu refuses to offer, and the same swap this sweep fixed one screen
+      # over.
+      #
+      # All three return `{ok_count, error_count}`, which every branch used
+      # to throw away and flash success unconditionally — so a bulk action
+      # where every row failed still reported "Comments approved".
+      {{ok_count, err_count}, label} =
+        case action do
+          "approve" -> {PhoenixKitComments.bulk_approve(uuids, opts), gettext("approved")}
+          "hide" -> {PhoenixKitComments.bulk_hide(uuids, opts), gettext("hidden")}
+          "delete" -> {bulk_delete(uuids, opts), gettext("deleted")}
+        end
 
       socket = socket |> load_comments() |> reload_stats()
 
       {:noreply,
        put_flash(socket, bulk_flash_kind(err_count), bulk_message(ok_count, err_count, label))}
     end
+  end
+
+  # Delete already routed through `delete_comment/2` inside
+  # `bulk_update_status/3`; kept on that path so its soft-delete bookkeeping
+  # stays in one place.
+  defp bulk_delete(uuids, opts) do
+    PhoenixKitComments.bulk_update_status(uuids, "deleted", opts)
   end
 
   ## --- Private ---
@@ -697,13 +714,17 @@ defmodule PhoenixKitComments.Web.Index do
   # comments carry the back-reference in `metadata["annotation_uuid"]`).
   defp link_with_annotation(url, %{resource_type: "file", metadata: metadata})
        when is_map(metadata) do
-    case Map.get(metadata, "annotation_uuid") do
-      uuid when is_binary(uuid) and uuid != "" ->
-        sep = if String.contains?(url, "?"), do: "&", else: "?"
-        url <> sep <> "annotation=" <> uuid
-
-      _ ->
-        url
+    # Cast, don't just check for a non-empty string. This metadata is
+    # free-form JSONB the client sets at create time, and the result goes
+    # into an href the ADMIN clicks — so `annotation_uuid=x&status=published`
+    # (or a `#fragment`) would ride along as extra query params on the target
+    # page. Only a real uuid can be appended.
+    with uuid when is_binary(uuid) <- Map.get(metadata, "annotation_uuid"),
+         {:ok, valid} <- Ecto.UUID.cast(uuid) do
+      sep = if String.contains?(url, "?"), do: "&", else: "?"
+      url <> sep <> "annotation=" <> valid
+    else
+      _ -> url
     end
   end
 
@@ -715,12 +736,26 @@ defmodule PhoenixKitComments.Web.Index do
   defp status_badge_class("deleted"), do: "badge badge-error badge-sm"
   defp status_badge_class(_), do: "badge badge-ghost badge-sm"
 
+  # Literal `gettext/1` per clause, because the extractor only sees literals —
+  # the msgids already exist and are already translated, since the stat tiles
+  # and the filter dropdown on this very page use them. The badge printed the
+  # raw DB enum instead, so a Russian admin saw the filter say
+  # "Опубликовано" and the badge next to it say "published".
+  defp status_label("published"), do: gettext("Published")
+  defp status_label("pending"), do: gettext("Pending")
+  defp status_label("hidden"), do: gettext("Hidden")
+  defp status_label("deleted"), do: gettext("Deleted")
+  defp status_label(other), do: other
+
   # The core card renders a `card_fields` entry's `value` as safe HTML, so the
   # grid view can show the same status badge as the table column instead of a
   # bare string. `status` is a fixed enum, but escape the label defensively.
   defp status_badge_value(status) do
     status = to_string(status)
-    text = status |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
+
+    text =
+      status |> status_label() |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
+
     Phoenix.HTML.raw(~s(<span class="#{status_badge_class(status)}">#{text}</span>))
   end
 end

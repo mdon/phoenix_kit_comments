@@ -98,6 +98,11 @@ defmodule PhoenixKitComments do
     Settings.get_boolean_setting("comments_enabled", false)
   rescue
     _ -> false
+  catch
+    # A settings read against an unowned checkout raises, but against a DEAD
+    # pool it exits — and this is the guard the whole module's "the database
+    # may not be there" story rests on.
+    :exit, _ -> false
   end
 
   @impl PhoenixKit.Module
@@ -149,6 +154,8 @@ defmodule PhoenixKitComments do
     end
   rescue
     _ -> 10_000
+  catch
+    :exit, _ -> 10_000
   end
 
   # ============================================================================
@@ -174,6 +181,8 @@ defmodule PhoenixKitComments do
     Settings.get_boolean_setting("comments_rich_text", true)
   rescue
     _ -> true
+  catch
+    :exit, _ -> true
   end
 
   # ============================================================================
@@ -186,6 +195,8 @@ defmodule PhoenixKitComments do
     Settings.get_boolean_setting("comments_attachments_enabled", false)
   rescue
     _ -> false
+  catch
+    :exit, _ -> false
   end
 
   @doc "Returns the per-comment attachment count cap (default 4)."
@@ -238,6 +249,10 @@ defmodule PhoenixKitComments do
   def giphy_enabled? do
     Settings.get_boolean_setting("comments_giphy_enabled", false) and
       get_giphy_api_key() != ""
+  rescue
+    _ -> false
+  catch
+    :exit, _ -> false
   end
 
   @doc "Returns the configured Giphy API key (empty string when unset)."
@@ -396,6 +411,30 @@ defmodule PhoenixKitComments do
   @impl PhoenixKit.Module
   def css_sources, do: [:phoenix_kit_comments]
 
+  @impl PhoenixKit.Module
+  def js_sources do
+    # A hook has to be in the host's LiveSocket when it is CONSTRUCTED. These
+    # two used to register themselves from an inline <script> in the component
+    # and settings templates, which works on a hard page load — the script runs
+    # during HTML parse, before app.js snapshots window.PhoenixKitHooks — and
+    # silently does nothing on a LiveView NAVIGATION, because morphdom never
+    # executes an inserted <script> and the hooks map is already fixed.
+    # Verified on a dev box: navigating to Settings → Comments logged
+    # `unknown hook found for "InsertAtCursor"` four times and the
+    # template-variable inserter was dead.
+    #
+    # Hook names are namespaced because the final fold is last-write-wins
+    # across every module's bundle AND core's own hooks (see the callback's
+    # docs) — `InsertAtCursor` was generic enough to collide.
+    [
+      %{
+        app: :phoenix_kit_comments,
+        file: "static/assets/phoenix_kit_comments.js",
+        global: "PhoenixKitCommentsHooks"
+      }
+    ]
+  end
+
   # ============================================================================
   # Comment CRUD
   # ============================================================================
@@ -405,6 +444,15 @@ defmodule PhoenixKitComments do
 
   Automatically calculates depth from parent. Invokes resource handler callback
   if configured.
+
+  > #### `:status` is server-side only {: .warning}
+  >
+  > An explicit `:status` in `attrs` overrides the moderation default, so a
+  > host that forwards raw user params into this function lets a commenter
+  > send `status: "published"` and skip the queue entirely. Treat it like
+  > `:inserted_at` and `:allow_empty_content`: set it from your own code, and
+  > never from anything a client can influence. `:depth` needs no such care —
+  > it is always recomputed from the parent here.
 
   ## Parameters
 
@@ -869,7 +917,17 @@ defmodule PhoenixKitComments do
 
     Map.new(uuids, fn uuid -> {uuid, Map.get(counts, uuid, 0)} end)
   rescue
-    _ -> Map.new(Enum.uniq(resource_uuids), &{&1, 0})
+    error ->
+      # Same reasoning as count_replies/2: zeros keep a listing rendering, but
+      # "0 comments" on a resource that has them is a plausible-looking wrong
+      # answer rather than an obviously broken one, so it has to leave a trace.
+      Logger.warning(
+        "PhoenixKitComments.count_comments/3 failed, reporting 0 for " <>
+          "#{length(Enum.uniq(resource_uuids))} #{resource_type} resources: " <>
+          Exception.message(error)
+      )
+
+      Map.new(Enum.uniq(resource_uuids), &{&1, 0})
   end
 
   def count_comments(resource_type, resource_uuid, opts) do
@@ -885,7 +943,13 @@ defmodule PhoenixKitComments do
 
     repo().aggregate(query, :count)
   rescue
-    _ -> 0
+    error ->
+      Logger.warning(
+        "PhoenixKitComments.count_comments/3 failed, reporting 0 for " <>
+          "#{resource_type} #{inspect(resource_uuid)}: " <> Exception.message(error)
+      )
+
+      0
   end
 
   defp apply_status_filter(query, nil, false), do: where(query, [c], c.status != "deleted")
@@ -998,7 +1062,10 @@ defmodule PhoenixKitComments do
   @doc "Sets a comment's status to published."
   def approve_comment(%Comment{} = comment, opts \\ []) do
     comment
-    |> update_comment(%{status: "published"}, opts)
+    # `log: false` so this writes ONE audit row, not a
+    # `comments.comment_updated` from the inner call plus the approval.
+    # restore_comment/2 and delete_comment/2 already did this.
+    |> update_comment(%{status: "published"}, Keyword.put(opts, :log, false))
     |> Activity.log_comment("comments.comment_approved", opts)
   end
 
@@ -1023,7 +1090,7 @@ defmodule PhoenixKitComments do
   @doc "Sets a comment's status to hidden."
   def hide_comment(%Comment{} = comment, opts \\ []) do
     comment
-    |> update_comment(%{status: "hidden"}, opts)
+    |> update_comment(%{status: "hidden"}, Keyword.put(opts, :log, false))
     |> Activity.log_comment("comments.comment_hidden", opts)
   end
 
@@ -1059,6 +1126,57 @@ defmodule PhoenixKitComments do
       end
     end)
   end
+
+  @doc """
+  Approves every listed comment, as `approve_comment/2` does one.
+
+  Not `bulk_update_status(uuids, "published", opts)`: that writes the status
+  directly, so it logs `comment_updated` rather than `comment_approved`, and
+  it publishes DELETED comments — the single-row menu hides Approve on a
+  deleted row precisely because "approve" must never mean "undelete".
+  Deleted rows are counted as failures here rather than silently skipped, so
+  the flash tells the truth about a mixed selection.
+
+  Returns `{approved_count, failed_count}`.
+  """
+  def bulk_approve(comment_uuids, opts \\ []) when is_list(comment_uuids) do
+    comment_uuids
+    |> load_for_bulk()
+    |> Enum.reduce({0, 0}, fn comment, {ok, err} ->
+      case comment.status do
+        "deleted" -> {ok, err + 1}
+        _ -> tally(approve_comment(comment, opts), ok, err)
+      end
+    end)
+  end
+
+  @doc """
+  Hides every listed comment, as `hide_comment/2` does one.
+
+  Same reason as `bulk_approve/2`: the status-writing path logs
+  `comment_updated`, so a bulk hide left no `comment_hidden` row behind it.
+
+  Returns `{hidden_count, failed_count}`.
+  """
+  def bulk_hide(comment_uuids, opts \\ []) when is_list(comment_uuids) do
+    comment_uuids
+    |> load_for_bulk()
+    |> Enum.reduce({0, 0}, fn comment, {ok, err} ->
+      tally(hide_comment(comment, opts), ok, err)
+    end)
+  end
+
+  # Same client-uuid filtering as bulk_update_status/3: one non-uuid element
+  # raises Ecto.Query.CastError for the whole batch.
+  defp load_for_bulk(comment_uuids) do
+    valid_uuids = Enum.filter(comment_uuids, &UUIDUtils.valid?/1)
+
+    from(c in Comment, where: c.uuid in ^valid_uuids)
+    |> repo().all()
+  end
+
+  defp tally({:ok, _}, ok, err), do: {ok + 1, err}
+  defp tally(_result, ok, err), do: {ok, err + 1}
 
   @doc """
   Lists all comments across all resource types with filters.
@@ -1441,10 +1559,20 @@ defmodule PhoenixKitComments do
         Map.put(attrs, :depth, 0)
 
       parent_uuid ->
-        case repo().get(Comment, parent_uuid) do
-          nil -> Map.put(attrs, :depth, 0)
-          parent -> Map.put(attrs, :depth, (parent.depth || 0) + 1)
-        end
+        Map.put(attrs, :depth, depth_below(parent_uuid))
+    end
+  end
+
+  # Validity first: `repo().get/2` on a malformed uuid raises
+  # Ecto.Query.CastError, so a bad `parent_uuid` crashed the caller instead of
+  # coming back as a changeset error. Leaving it unresolved lets the insert
+  # fail properly on the cast/FK.
+  defp depth_below(parent_uuid) do
+    with true <- UUIDUtils.valid?(parent_uuid),
+         %Comment{} = parent <- repo().get(Comment, parent_uuid) do
+      (parent.depth || 0) + 1
+    else
+      _ -> 0
     end
   end
 
@@ -1583,7 +1711,13 @@ defmodule PhoenixKitComments do
     query = if status, do: where(query, [c], c.status == ^status), else: query
     repo().aggregate(query, :count)
   rescue
-    _ -> 0
+    error ->
+      Logger.warning(
+        "PhoenixKitComments.count_all_comments/1 failed, reporting 0" <>
+          " (status=#{inspect(Keyword.get(opts, :status))}): " <> Exception.message(error)
+      )
+
+      0
   end
 
   defp maybe_filter_by_user(query, nil), do: query
@@ -1709,6 +1843,13 @@ defmodule PhoenixKitComments do
     error ->
       Logger.debug("Comment change broadcast skipped: #{inspect(error)}")
       :ok
+  catch
+    # An unstarted PubSub raises; a DEAD one exits on the registry lookup.
+    # This guard exists so a missing PubSub cannot break the write path, and
+    # without this clause it only half did.
+    :exit, reason ->
+      Logger.debug("Comment change broadcast skipped: #{inspect(reason)}")
+      :ok
   end
 
   # After a reaction toggle that actually changed state, broadcast the change
@@ -1759,6 +1900,14 @@ defmodule PhoenixKitComments do
     error ->
       Logger.warning("Reaction broadcast/notify skipped: #{inspect(error)}")
       :ok
+  catch
+    # The reaction is already committed by the time this runs; the whole
+    # point of the guard is that nothing here can fail the write. `rescue`
+    # alone did not deliver that — `get_comment/1` on a dead pool exits, and
+    # the exit took out the page for a like that had saved fine.
+    :exit, reason ->
+      Logger.warning("Reaction broadcast/notify skipped: #{inspect(reason)}")
+      :ok
   end
 
   defp after_reaction(_result, _comment_uuid, _liker_uuid), do: :ok
@@ -1785,7 +1934,39 @@ defmodule PhoenixKitComments do
     error ->
       Logger.warning("Comment resource handler error: #{inspect(error)}")
       :ok
+  catch
+    # This applies/3 arbitrary HOST code, and it runs after the comment has
+    # already committed. A handler doing a GenServer.call to a dead process
+    # exits rather than raising, and the exit propagates out of
+    # create_comment/4 and kills the LiveView — leaving the user looking at a
+    # crashed page for a comment that was saved fine.
+    :exit, reason ->
+      # NOT `inspect(reason)`: a handler doing `GenServer.call(worker,
+      # {:created, comment})` against a dead or slow process exits with the
+      # call ARGUMENTS in the reason, so logging it verbatim writes the
+      # entire comment — body, author, metadata — into production logs. The
+      # shape is what a reader needs; the payload is what they must not get.
+      Logger.warning("Comment resource handler exited: #{exit_summary(reason)}")
+      :ok
   end
+
+  # A one-line, payload-free description of an exit reason.
+  defp exit_summary({:timeout, {GenServer, :call, _args}}), do: "GenServer.call timeout"
+  defp exit_summary({:noproc, {GenServer, :call, _args}}), do: "GenServer.call to a dead process"
+  defp exit_summary({reason, {GenServer, :call, _args}}), do: "GenServer.call: #{inspect(reason)}"
+  defp exit_summary(:normal), do: "normal"
+  defp exit_summary(:shutdown), do: "shutdown"
+  defp exit_summary(reason) when is_atom(reason), do: inspect(reason)
+
+  # Anything else: name the top-level shape only. An exception struct is
+  # safe to name but not to render — its message interpolates the value.
+  defp exit_summary(%{__struct__: module}), do: inspect(module)
+
+  defp exit_summary(reason) when is_tuple(reason) and tuple_size(reason) > 0 do
+    "#{inspect(elem(reason, 0))} (details omitted)"
+  end
+
+  defp exit_summary(_reason), do: "unknown reason (details omitted)"
 
   defp repo do
     PhoenixKit.RepoHelper.repo()

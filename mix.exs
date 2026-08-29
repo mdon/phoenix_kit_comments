@@ -87,6 +87,10 @@ defmodule PhoenixKitComments.MixProject do
       # LiveView is needed for the admin pages.
       {:phoenix_live_view, "~> 1.1"},
 
+      # Phoenix.LiveViewTest parses rendered HTML with this from LV 1.1 on;
+      # without it `element/2` and `has_element?/2` raise.
+      {:lazy_html, "~> 0.1", only: :test},
+
       # Giphy API client used by the optional Giphy picker in the comment form.
       {:giphy_api, "~> 0.1.1"},
 

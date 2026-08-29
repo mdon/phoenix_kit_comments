@@ -280,6 +280,7 @@
             <button
               type="button"
               phx-click="reset_defaults"
+                    phx-disable-with={gettext("Resetting...")}
               class="btn btn-outline"
               data-confirm={
                 gettext(
@@ -295,69 +296,6 @@
     </div>
 
     <%!-- Resource Link Patterns (outside main form to avoid nested forms) --%>
-    <script>
-      (function() {
-        window.PhoenixKitHooks = window.PhoenixKitHooks || {};
-        if (window.PhoenixKitHooks.InsertAtCursor) return;
-        window.PhoenixKitHooks.InsertAtCursor = {
-          mounted() {
-            this._lastInput = null;
-            this._lastCursorPos = 0;
-            this._abortController = null;
-            this.setup();
-          },
-          updated() { this.setup(); },
-          destroyed() {
-            if (this._abortController) this._abortController.abort();
-          },
-          colorBadges() {
-            var container = this.el;
-            var input = this._lastInput;
-            var val = input ? input.value : "";
-            container.querySelectorAll("[data-field]").forEach(function(badge) {
-              var used = val && val.indexOf(badge.dataset.field) !== -1;
-              badge.classList.remove("badge-success", "badge-ghost");
-              badge.classList.add(used ? "badge-success" : "badge-ghost");
-            });
-          },
-          setup() {
-            if (this._abortController) this._abortController.abort();
-            this._abortController = new AbortController();
-            var signal = this._abortController.signal;
-            var self = this;
-            var container = this.el;
-            var trackCursor = function(input) {
-              self._lastInput = input;
-              self._lastCursorPos = input.selectionStart;
-              self.colorBadges();
-            };
-            container.querySelectorAll("textarea, input[type='text']").forEach(function(input) {
-              input.addEventListener("focus", function() { trackCursor(input); }, { signal: signal });
-              input.addEventListener("keyup", function() { trackCursor(input); }, { signal: signal });
-              input.addEventListener("click", function() { trackCursor(input); }, { signal: signal });
-              input.addEventListener("input", function() { self.colorBadges(); }, { signal: signal });
-            });
-            self.colorBadges();
-            container.querySelectorAll("[data-field]").forEach(function(badge) {
-              badge.style.cursor = "pointer";
-              badge.addEventListener("click", function(e) {
-                e.preventDefault();
-                var input = self._lastInput || container.querySelector("textarea, input[type='text']");
-                if (!input) return;
-                var val = badge.dataset.field;
-                var pos = self._lastCursorPos || 0;
-                input.value = input.value.slice(0, pos) + val + input.value.slice(pos);
-                var newPos = pos + val.length;
-                self._lastCursorPos = newPos;
-                input.selectionStart = input.selectionEnd = newPos;
-                input.focus();
-                input.dispatchEvent(new Event("input", { bubbles: true }));
-              }, { signal: signal });
-            });
-          }
-        };
-      })();
-    </script>
     <div class="card bg-base-100 shadow-xl mb-6">
       <div class="card-body overflow-hidden">
         <h2 class="card-title text-lg mb-2 flex-wrap">
@@ -411,7 +349,7 @@
                       <td colspan="3">
                         <div
                           id={"edit-path-#{resource_type}"}
-                          phx-hook="InsertAtCursor"
+                          phx-hook="PhoenixKitCommentsInsertAtCursor"
                         >
                           <.form
                             for={%{}}
@@ -506,6 +444,7 @@
                           <button
                             type="button"
                             phx-click="remove_resource_path"
+                    phx-disable-with={gettext("Removing...")}
                             phx-value-type={resource_type}
                             class="btn btn-ghost btn-xs text-error"
                             data-confirm={
@@ -531,7 +470,7 @@
               <%= if @editing_resource_type == resource_type do %>
                 <div
                   id={"edit-path-mobile-#{resource_type}"}
-                  phx-hook="InsertAtCursor"
+                  phx-hook="PhoenixKitCommentsInsertAtCursor"
                   class="bg-base-200 rounded-lg p-3"
                 >
                   <div class="flex items-center justify-between mb-2">
@@ -612,6 +551,7 @@
                       <button
                         type="button"
                         phx-click="remove_resource_path"
+                    phx-disable-with={gettext("Removing...")}
                         phx-value-type={resource_type}
                         class="btn btn-ghost btn-xs text-error"
                         data-confirm={
@@ -653,7 +593,7 @@
               <%= for resource_type <- @unconfigured_types do %>
                 <div
                   id={"draft-path-#{resource_type}"}
-                  phx-hook="InsertAtCursor"
+                  phx-hook="PhoenixKitCommentsInsertAtCursor"
                   class="bg-base-200 rounded-lg p-3"
                 >
                   <.form

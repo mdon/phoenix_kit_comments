@@ -43,7 +43,7 @@
 
   <%!-- Filters: Desktop --%>
   <div class="hidden md:block bg-base-200 rounded-lg p-4 mb-6">
-    <.form for={%{}} phx-change="filter" class="flex gap-4 items-end">
+    <.form for={%{}} id="comment-filters-desktop" phx-change="filter" class="flex gap-4 items-end">
       <div class="fieldset flex-1">
         <label class="label"><span class="fieldset-legend">{gettext("Search")}</span></label>
         <div class="relative">
@@ -74,7 +74,7 @@
             <option value="">{gettext("All Types")}</option>
             <%= for rt <- @resource_types do %>
               <option value={rt} selected={@filter_resource_type == rt}>
-                {String.capitalize(rt)}
+                {humanize_resource_type(rt)}
               </option>
             <% end %>
           </select>
@@ -110,7 +110,7 @@
 
   <%!-- Filters: Mobile --%>
   <div class="md:hidden bg-base-200 rounded-lg p-4 mb-6">
-    <.form for={%{}} phx-change="filter" class="space-y-3">
+    <.form for={%{}} id="comment-filters-mobile" phx-change="filter" class="space-y-3">
       <div class="fieldset">
         <label class="label"><span class="fieldset-legend">{gettext("Search")}</span></label>
         <div class="relative">
@@ -142,7 +142,7 @@
               <option value="">{gettext("All Types")}</option>
               <%= for rt <- @resource_types do %>
                 <option value={rt} selected={@filter_resource_type == rt}>
-                  {String.capitalize(rt)}
+                  {humanize_resource_type(rt)}
                 </option>
               <% end %>
             </select>
@@ -298,7 +298,7 @@
               </.table_default_cell>
               <.table_default_cell>
                 <span class={status_badge_class(comment.status)}>
-                  {comment.status}
+                  {status_label(comment.status)}
                 </span>
               </.table_default_cell>
               <.table_default_cell>
@@ -365,7 +365,7 @@
           </span>
           <span class="text-base-content/30">·</span>
           <span>{Calendar.strftime(@viewing_comment.inserted_at, "%b %d, %Y")}</span>
-          <span class={status_badge_class(@viewing_comment.status)}>{@viewing_comment.status}</span>
+          <span class={status_badge_class(@viewing_comment.status)}>{status_label(@viewing_comment.status)}</span>
         </div>
 
         <div class="mb-3">

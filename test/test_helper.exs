@@ -17,7 +17,16 @@
 
 support_dir = Path.expand("support", __DIR__)
 
-for file <- ["test_repo.ex", "data_case.ex"] do
+for file <- [
+      "test_repo.ex",
+      "data_case.ex",
+      "activity_log_assertions.ex",
+      "test_layouts.ex",
+      "hooks.ex",
+      "test_router.ex",
+      "test_endpoint.ex",
+      "live_case.ex"
+    ] do
   Code.require_file(Path.join(support_dir, file))
 end
 
@@ -80,6 +89,12 @@ repo_available =
 
       false
   end
+
+# The LiveView test endpoint. Skipped without a repo — those tests are
+# `:integration` and excluded in that case anyway.
+if repo_available do
+  {:ok, _pid} = PhoenixKitComments.Test.Endpoint.start_link()
+end
 
 if repo_available do
   ExUnit.start()

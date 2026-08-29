@@ -1,0 +1,34 @@
+defmodule PhoenixKitComments.Test.Hooks do
+  @moduledoc """
+  `on_mount` hooks for the LiveView test endpoint.
+
+  Production runs these LiveViews inside core's `live_session
+  :phoenix_kit_admin`, which populates `:phoenix_kit_current_scope` and
+  `:phoenix_kit_current_user` from the host's authentication. The test
+  endpoint does not load core's hooks, so this replicates the effect from a
+  scope the test put in the session via `LiveCase.put_test_scope/2`.
+  """
+
+  import Phoenix.Component, only: [assign: 3]
+
+  def on_mount(:assign_scope, _params, session, socket) do
+    socket =
+      socket
+      |> assign(:current_locale, session["phoenix_kit_test_locale"] || "en")
+      |> assign(:current_locale_base, session["phoenix_kit_test_locale_base"] || "en")
+      |> assign(:url_path, "/en/admin/comments")
+
+    socket =
+      case Map.get(session, "phoenix_kit_test_scope") do
+        %{user: user} = scope ->
+          socket
+          |> assign(:phoenix_kit_current_scope, scope)
+          |> assign(:phoenix_kit_current_user, user)
+
+        _ ->
+          socket
+      end
+
+    {:cont, socket}
+  end
+end
