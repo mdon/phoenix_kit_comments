@@ -108,6 +108,51 @@ the broken pattern; corrected.
 - **"`String.capitalize/1` in `humanize_resource_type/1`."** Applied per word
   to a programmatic slug, which is the permitted case.
 
+## What an external panel found in the fixes
+
+Four models reviewed the PR after the fixes were in. Verified before acting:
+
+- **The kill switch still did not reach an open thread.** Reading the setting
+  into an assign is only as fresh as the last render, and a `phx-submit`
+  reaches `handle_event` directly — `update/2` does not run first. So a
+  thread open when the admin flipped the switch kept accepting writes, which
+  is the entire case the gate exists for. It now asks at event time;
+  permitted writes re-enter under a `{:write, event}` tag the gate's guard
+  cannot match, so every handler stays where it is and the question is still
+  asked in exactly one place.
+- **Bulk Approve published deleted comments.** The Approve/Restore swap this
+  sweep is named for was still live one control over: `do_bulk_action` wrote
+  the status directly, so bulk Approve set "published" on rows whose row menu
+  deliberately hides Approve, and logged `comment_updated` instead of the
+  moderation action. Both bulk paths now go through the same context
+  functions as their single-row menu items.
+- **The decoration fix was keyed on data.** `comment_decorations` is a
+  registry of VALUES rebuilt each render — core's builder returns `%{}` until
+  an annotation has a title — so dropping "the keys currently in it" dropped
+  nothing on precisely the pages with nothing to show yet, and a comment
+  planted in that window kept its forged link until a title appeared.
+  `:decoration_keys` is the static declaration that does not move with the
+  data. The component also never told the host WHO clicked, so the host could
+  not answer the question the component cannot: `actor_uuid` now rides in the
+  payload.
+- **`viewer_is_admin?` was frozen for the component's lifetime**, so a host
+  mounting with `current_user: nil` and sending the user after rendered every
+  comment for a stranger.
+- Smaller: the sibling decoration path skipped the label cap the other
+  declares; `save_edit` took a non-binary body into `String.trim/1`; four
+  settings reads on the render path rescued without catching `:exit`, as did
+  the post-commit reaction hook; and the handler-exit log wrote
+  `inspect(reason)`, which for a `GenServer.call` timeout carries the call
+  arguments — the whole comment — into the log.
+
+**Rejected:** that moving the hooks to `js_sources/0` could leave a host
+without them. `js_sources/0` has been in core since 1.7.146 and this module
+pins `~> 2.0`, so no core satisfying the pin lacks the callback.
+
+**Coverage note:** the component now has a host page in the test harness
+(`Test.HostLive`). It had none, which is why none of the above was caught
+here first.
+
 ## Open — needs a decision
 
 1. **`:status` on `create_comment/4`.** Dropping it from the create cast would
