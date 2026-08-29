@@ -154,6 +154,8 @@ defmodule PhoenixKitComments do
     end
   rescue
     _ -> 10_000
+  catch
+    :exit, _ -> 10_000
   end
 
   # ============================================================================
@@ -179,6 +181,8 @@ defmodule PhoenixKitComments do
     Settings.get_boolean_setting("comments_rich_text", true)
   rescue
     _ -> true
+  catch
+    :exit, _ -> true
   end
 
   # ============================================================================
@@ -191,6 +195,8 @@ defmodule PhoenixKitComments do
     Settings.get_boolean_setting("comments_attachments_enabled", false)
   rescue
     _ -> false
+  catch
+    :exit, _ -> false
   end
 
   @doc "Returns the per-comment attachment count cap (default 4)."
@@ -243,6 +249,10 @@ defmodule PhoenixKitComments do
   def giphy_enabled? do
     Settings.get_boolean_setting("comments_giphy_enabled", false) and
       get_giphy_api_key() != ""
+  rescue
+    _ -> false
+  catch
+    :exit, _ -> false
   end
 
   @doc "Returns the configured Giphy API key (empty string when unset)."
@@ -1118,6 +1128,57 @@ defmodule PhoenixKitComments do
   end
 
   @doc """
+  Approves every listed comment, as `approve_comment/2` does one.
+
+  Not `bulk_update_status(uuids, "published", opts)`: that writes the status
+  directly, so it logs `comment_updated` rather than `comment_approved`, and
+  it publishes DELETED comments — the single-row menu hides Approve on a
+  deleted row precisely because "approve" must never mean "undelete".
+  Deleted rows are counted as failures here rather than silently skipped, so
+  the flash tells the truth about a mixed selection.
+
+  Returns `{approved_count, failed_count}`.
+  """
+  def bulk_approve(comment_uuids, opts \\ []) when is_list(comment_uuids) do
+    comment_uuids
+    |> load_for_bulk()
+    |> Enum.reduce({0, 0}, fn comment, {ok, err} ->
+      case comment.status do
+        "deleted" -> {ok, err + 1}
+        _ -> tally(approve_comment(comment, opts), ok, err)
+      end
+    end)
+  end
+
+  @doc """
+  Hides every listed comment, as `hide_comment/2` does one.
+
+  Same reason as `bulk_approve/2`: the status-writing path logs
+  `comment_updated`, so a bulk hide left no `comment_hidden` row behind it.
+
+  Returns `{hidden_count, failed_count}`.
+  """
+  def bulk_hide(comment_uuids, opts \\ []) when is_list(comment_uuids) do
+    comment_uuids
+    |> load_for_bulk()
+    |> Enum.reduce({0, 0}, fn comment, {ok, err} ->
+      tally(hide_comment(comment, opts), ok, err)
+    end)
+  end
+
+  # Same client-uuid filtering as bulk_update_status/3: one non-uuid element
+  # raises Ecto.Query.CastError for the whole batch.
+  defp load_for_bulk(comment_uuids) do
+    valid_uuids = Enum.filter(comment_uuids, &UUIDUtils.valid?/1)
+
+    from(c in Comment, where: c.uuid in ^valid_uuids)
+    |> repo().all()
+  end
+
+  defp tally({:ok, _}, ok, err), do: {ok + 1, err}
+  defp tally(_result, ok, err), do: {ok, err + 1}
+
+  @doc """
   Lists all comments across all resource types with filters.
 
   ## Options
@@ -1839,6 +1900,14 @@ defmodule PhoenixKitComments do
     error ->
       Logger.warning("Reaction broadcast/notify skipped: #{inspect(error)}")
       :ok
+  catch
+    # The reaction is already committed by the time this runs; the whole
+    # point of the guard is that nothing here can fail the write. `rescue`
+    # alone did not deliver that — `get_comment/1` on a dead pool exits, and
+    # the exit took out the page for a like that had saved fine.
+    :exit, reason ->
+      Logger.warning("Reaction broadcast/notify skipped: #{inspect(reason)}")
+      :ok
   end
 
   defp after_reaction(_result, _comment_uuid, _liker_uuid), do: :ok
@@ -1872,9 +1941,32 @@ defmodule PhoenixKitComments do
     # create_comment/4 and kills the LiveView — leaving the user looking at a
     # crashed page for a comment that was saved fine.
     :exit, reason ->
-      Logger.warning("Comment resource handler exited: #{inspect(reason)}")
+      # NOT `inspect(reason)`: a handler doing `GenServer.call(worker,
+      # {:created, comment})` against a dead or slow process exits with the
+      # call ARGUMENTS in the reason, so logging it verbatim writes the
+      # entire comment — body, author, metadata — into production logs. The
+      # shape is what a reader needs; the payload is what they must not get.
+      Logger.warning("Comment resource handler exited: #{exit_summary(reason)}")
       :ok
   end
+
+  # A one-line, payload-free description of an exit reason.
+  defp exit_summary({:timeout, {GenServer, :call, _args}}), do: "GenServer.call timeout"
+  defp exit_summary({:noproc, {GenServer, :call, _args}}), do: "GenServer.call to a dead process"
+  defp exit_summary({reason, {GenServer, :call, _args}}), do: "GenServer.call: #{inspect(reason)}"
+  defp exit_summary(:normal), do: "normal"
+  defp exit_summary(:shutdown), do: "shutdown"
+  defp exit_summary(reason) when is_atom(reason), do: inspect(reason)
+
+  # Anything else: name the top-level shape only. An exception struct is
+  # safe to name but not to render — its message interpolates the value.
+  defp exit_summary(%{__struct__: module}), do: inspect(module)
+
+  defp exit_summary(reason) when is_tuple(reason) and tuple_size(reason) > 0 do
+    "#{inspect(elem(reason, 0))} (details omitted)"
+  end
+
+  defp exit_summary(_reason), do: "unknown reason (details omitted)"
 
   defp repo do
     PhoenixKit.RepoHelper.repo()

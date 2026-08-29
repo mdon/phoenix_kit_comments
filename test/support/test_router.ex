@@ -46,6 +46,19 @@ defmodule PhoenixKitComments.Test.Router do
     end
   end
 
+  # A consuming application's page, embedding the component. See
+  # `PhoenixKitComments.Test.HostLive` for why the admin routes above cannot
+  # stand in for it.
+  scope "/en/test", PhoenixKitComments.Test do
+    pipe_through(:browser)
+
+    live_session :comments_test_host,
+      layout: {PhoenixKitComments.Test.Layouts, :app},
+      on_mount: {PhoenixKitComments.Test.Hooks, :assign_scope} do
+      live("/thread/:resource_uuid", HostLive, :index, as: :test_host)
+    end
+  end
+
   # `push_navigate(to: Routes.path("/admin"))` is where both LiveViews send an
   # unauthorized or disabled visitor. Without a route to land on, that
   # redirect raises instead of being assertable.

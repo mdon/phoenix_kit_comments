@@ -36,7 +36,9 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
   - `:form_extras` - Custom markup rendered inside the new-comment form. Use it to
     inject parent-project inputs whose names are `metadata[<key>]`; their values are
     merged into `comment.metadata` on submit. The `"giphy"` key is reserved for the
-    built-in Giphy picker.
+    built-in Giphy picker, and any key listed in `decoration_keys` is dropped —
+    a client may not claim the link between a comment and one of your records.
+    Make that link server-side, in your own `create_comment/4` call.
 
         <:form_extras>
           <input type="color" name="metadata[box_color]" value="#ff5555" />
@@ -163,7 +165,17 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
       # a hardcoded default it only reached the admin pages, and every host
       # that embedded this component without passing `enabled=` kept taking
       # writes. A host attr still wins, as an additional off switch.
-      |> assign_new(:enabled, fn -> PhoenixKitComments.enabled?() end)
+      #
+      # Re-read on EVERY update rather than `assign_new`, like the three
+      # settings reads below it: `assign_new` samples the setting once and
+      # the `@write_events` gate then consults that frozen copy forever, so
+      # a thread that was open when the admin flipped the switch went on
+      # accepting writes until its next full mount — which is precisely the
+      # case the gate exists for. A host's own `enabled=` is remembered
+      # separately so a partial `send_update` that omits it cannot
+      # accidentally re-enable a thread the host turned off.
+      |> then(&assign(&1, :host_enabled, Map.get(assigns, :enabled, &1.assigns[:host_enabled])))
+      |> then(&assign(&1, :enabled, effective_enabled(&1.assigns.host_enabled)))
       |> assign_new(:show_likes, fn -> true end)
       |> assign_new(:title, fn -> gettext("Comments") end)
       # Rich-text (Leaf) editor opt-out. Host attr wins; otherwise the
@@ -212,9 +224,15 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
       # recursively per reply, so a long thread was hundreds of role queries
       # per re-render. Reads the SOCKET, not the incoming assigns, because a
       # send_update may omit `:current_user`.
-      |> then(
-        &assign_new(&1, :viewer_is_admin?, fn -> user_is_admin?(&1.assigns[:current_user]) end)
-      )
+      #
+      # Once per UPDATE, not once per component: `assign_new` here would
+      # freeze the viewer's role for the component's whole life, so a host
+      # that mounts with `current_user: nil` and sends the loaded user after
+      # (the async-load pattern) would render every comment for a stranger,
+      # and a role revoked mid-session would keep its Edit/Delete controls.
+      # The event handlers re-check for real, so this is what the viewer
+      # SEES, not what they may do — but it should still be current.
+      |> then(&assign(&1, :viewer_is_admin?, user_is_admin?(&1.assigns[:current_user])))
       # Optional per-comment decoration registry. Generic surface
       # for rendering an external label above the comment body,
       # driven by one of the comment's `metadata[key]` fields. The
@@ -250,6 +268,12 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
       # The first matching decoration wins per comment; multiple
       # decorations per comment aren't supported in this iteration.
       |> assign_new(:comment_decorations, fn -> %{} end)
+      # The metadata KEYS this host decorates with, as a static list —
+      # `["annotation_uuid"]` for the viewer above. Separate from the
+      # registry because the registry is built from data and is empty
+      # before there is anything to label, while the set of keys a client
+      # must never write is fixed. See `decoration_keys/1`.
+      |> assign_new(:decoration_keys, fn -> [] end)
       # Parent component to receive `send_update` when a decoration
       # is inline-edited (only relevant for decorations whose
       # entry sets `on_save`). The payload shape is:
@@ -257,7 +281,15 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
       #     %{action: <on_save atom>,
       #       metadata_key: <string>,
       #       metadata_value: <string>,
-      #       label: <new string>}
+      #       label: <new string>,
+      #       actor_uuid: <uuid> | nil}
+      #
+      # `actor_uuid` is who clicked. This component authorizes the COMMENT
+      # (you may edit your own), which is not the same question as "may
+      # this person rename that host record" — the link between the two is
+      # a metadata value, and metadata is not proof of anything. The host
+      # owns the record and must decide; it is given the actor to decide
+      # with.
       |> assign_new(:parent_module, fn -> nil end)
       |> assign_new(:parent_id, fn -> nil end)
       # Derive from the RESOLVED socket value (kept across updates by the
@@ -322,17 +354,30 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
                    save_decoration begin_decoration_edit)
 
   @impl true
-  def handle_event(event, _params, %{assigns: %{enabled: false}} = socket)
-      when event in @write_events do
-    {:noreply, put_flash(socket, :error, gettext("Comments are turned off here."))}
+  def handle_event(event, params, socket) when event in @write_events do
+    # Asked NOW, not read off an assign. A `phx-submit` reaches this
+    # function directly: `update/2` does not run first, so `@enabled` still
+    # holds whatever the last render put there. A thread that was open when
+    # an admin turned comments off therefore kept accepting writes — the
+    # exact case this gate exists to close.
+    #
+    # Permitted writes re-enter under `{:write, event}`, which this clause
+    # cannot match (the guard admits only the strings), so each handler
+    # stays where it is and the gate stays the single place the question is
+    # asked. LiveView only ever calls this with a binary; the tagged form is
+    # internal.
+    if writes_enabled?(socket) do
+      handle_event({:write, event}, params, socket)
+    else
+      {:noreply, put_flash(socket, :error, gettext("Comments are turned off here."))}
+    end
   end
 
-  @impl true
-  def handle_event("add_comment", _params, %{assigns: %{can_post?: false}} = socket) do
+  def handle_event({:write, "add_comment"}, _params, %{assigns: %{can_post?: false}} = socket) do
     {:noreply, put_flash(socket, :error, gettext("Sign in to post a comment"))}
   end
 
-  def handle_event("add_comment", params, socket) do
+  def handle_event({:write, "add_comment"}, params, socket) do
     # When Leaf is the editor, content lives in socket.assigns
     # (kept fresh by forwarded `:leaf_changed` messages from the
     # host LV). The form submit doesn't carry Leaf's contenteditable.
@@ -543,13 +588,11 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
     {:noreply, assign(socket, :giphy_selected, nil)}
   end
 
-  @impl true
-  def handle_event("toggle_like", %{"id" => comment_uuid}, socket) do
+  def handle_event({:write, "toggle_like"}, %{"id" => comment_uuid}, socket) do
     toggle_reaction(socket, comment_uuid, :like)
   end
 
-  @impl true
-  def handle_event("toggle_dislike", %{"id" => comment_uuid}, socket) do
+  def handle_event({:write, "toggle_dislike"}, %{"id" => comment_uuid}, socket) do
     toggle_reaction(socket, comment_uuid, :dislike)
   end
 
@@ -618,8 +661,7 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
      |> assign(:editing_decoration_value, "")}
   end
 
-  @impl true
-  def handle_event("save_edit", params, socket) do
+  def handle_event({:write, "save_edit"}, params, socket) do
     comment_uuid = socket.assigns.editing_uuid
 
     # Same Leaf-vs-textarea source split as `add_comment`.
@@ -632,8 +674,14 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
             do: socket.assigns.editing_content,
             else: ""
 
-        text ->
+        text when is_binary(text) ->
           text
+
+        # `content[x]=y` arrives as a map and used to reach String.trim/1
+        # in do_save_edit, killing the host LiveView. The create path was
+        # hardened for exactly this payload; the edit path was not.
+        _ ->
+          ""
       end
 
     # Preload :media so `do_save_edit` can tell a genuinely-empty edit apart
@@ -656,8 +704,7 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
 
   @decoration_label_max 200
 
-  @impl true
-  def handle_event("begin_decoration_edit", %{"uuid" => comment_uuid}, socket) do
+  def handle_event({:write, "begin_decoration_edit"}, %{"uuid" => comment_uuid}, socket) do
     case decoration_if_permitted(comment_uuid, socket) do
       %{label: label, on_save: on_save, metadata_key: metadata_key} when not is_nil(on_save) ->
         {:noreply,
@@ -678,8 +725,11 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
      |> assign(:editing_decoration_value, "")}
   end
 
-  @impl true
-  def handle_event("save_decoration", %{"uuid" => comment_uuid, "label" => label}, socket)
+  def handle_event(
+        {:write, "save_decoration"},
+        %{"uuid" => comment_uuid, "label" => label},
+        socket
+      )
       when is_binary(label) do
     case decoration_if_permitted(comment_uuid, socket) do
       %{on_save: on_save, metadata_key: metadata_key, metadata_value: metadata_value}
@@ -692,7 +742,8 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
             metadata_value: metadata_value,
             # Capped server-side. `maxlength` on the input is a courtesy to
             # the person typing, not a limit — the event can carry anything.
-            label: label |> String.trim() |> String.slice(0, @decoration_label_max)
+            label: cap_decoration_label(label),
+            actor_uuid: actor_uuid(socket)
           )
         end
 
@@ -708,10 +759,9 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
 
   # A non-binary `label` (`label[a]=b`) used to reach String.trim/1 and kill
   # the LiveView. Must sit AFTER the real clause, not before it.
-  def handle_event("save_decoration", _params, socket), do: {:noreply, socket}
+  def handle_event({:write, "save_decoration"}, _params, socket), do: {:noreply, socket}
 
-  @impl true
-  def handle_event("delete_comment", %{"id" => comment_uuid}, socket) do
+  def handle_event({:write, "delete_comment"}, %{"id" => comment_uuid}, socket) do
     case PhoenixKitComments.get_comment(comment_uuid) do
       nil ->
         {:noreply, socket |> put_flash(:error, gettext("Comment not found"))}
@@ -741,11 +791,40 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
         action: on_save,
         metadata_key: metadata_key,
         metadata_value: metadata_value,
-        label: String.trim(label)
+        # Same cap as the dedicated `save_decoration` path. This one forwards
+        # a label captured by the comment-edit form, and it trimmed without
+        # bounding — so the server-side limit the sibling declares was one
+        # forged `save_edit` away from not existing.
+        label: cap_decoration_label(label),
+        actor_uuid: actor_uuid(socket)
       )
     end
 
     :ok
+  end
+
+  # nil means "the host said nothing", so the module's own switch decides —
+  # re-read on every update. A host that passed `enabled=` keeps its answer.
+  defp effective_enabled(nil), do: PhoenixKitComments.enabled?()
+  defp effective_enabled(host_value), do: host_value
+
+  # The same question as `:enabled`, asked at event time rather than at
+  # render time. `:host_enabled` is the host's own switch, remembered across
+  # partial updates; with no host answer the module setting decides, read
+  # fresh.
+  defp writes_enabled?(socket) do
+    effective_enabled(socket.assigns[:host_enabled]) == true
+  end
+
+  defp cap_decoration_label(label) when is_binary(label) do
+    label |> String.trim() |> String.slice(0, @decoration_label_max)
+  end
+
+  defp actor_uuid(socket) do
+    case socket.assigns[:current_user] do
+      %{uuid: uuid} -> uuid
+      _ -> nil
+    end
   end
 
   # Finds the first decoration entry that matches a comment. Scans
@@ -790,11 +869,29 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
       %{} = metadata ->
         metadata
         |> Map.delete("giphy")
-        |> Map.drop(Map.keys(socket.assigns[:comment_decorations] || %{}))
+        |> Map.drop(decoration_keys(socket))
 
       _ ->
         %{}
     end
+  end
+
+  # The metadata keys a client may never write, because they LINK a comment
+  # to a host record.
+  #
+  # `comment_decorations` alone is not a safe source for this: it is a
+  # registry of VALUES, rebuilt from data on every render, so the key is
+  # absent whenever the page happens to have nothing to decorate yet — core's
+  # `build_comment_decorations/1` returns `%{}` until an annotation is given
+  # a title. A comment planted in that window keeps its forged link and
+  # decorates the victim's record the moment a title appears. `:decoration_keys`
+  # is the static declaration that does not move with the data; hosts using
+  # decorations should pass it, and the registry's keys remain a floor.
+  defp decoration_keys(socket) do
+    declared = socket.assigns[:decoration_keys] || []
+    registry = Map.keys(socket.assigns[:comment_decorations] || %{})
+
+    Enum.uniq(declared ++ registry)
   end
 
   # Label for a comment's matching decoration, or "" when none. Kept
@@ -952,6 +1049,10 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
   defp create_error_message(:max_depth_exceeded), do: gettext("Reply nesting is too deep")
   defp create_error_message(:content_too_long), do: gettext("Comment exceeds maximum length")
   defp create_error_message(:invalid_user_uuid), do: gettext("Invalid user")
+
+  # Same wording as the write gate above, because it is the same refusal —
+  # reached when the switch was flipped after this page was rendered.
+  defp create_error_message(:module_disabled), do: gettext("Comments are turned off here.")
   defp create_error_message(:invalid_file_uuid), do: gettext("Invalid file attachment")
   defp create_error_message(_), do: gettext("Failed to add comment")
 

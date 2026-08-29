@@ -183,15 +183,75 @@ defmodule PhoenixKitComments.Web.ModerationLiveTest do
     end
   end
 
+  describe "bulk actions" do
+    test "bulk approve publishes pending comments and logs the approval",
+         %{conn: conn, scope: scope, moderator: moderator, author: author} do
+      comment = comment_with_status(author, "pending")
+      {:ok, view, _html} = live(put_test_scope(conn, scope), @path)
+
+      render_click(view, "bulk_approve", %{"uuids" => [comment.uuid]})
+
+      assert status_of(comment) == "published"
+
+      # The single-row path was fixed to log the moderation action; the bulk
+      # path wrote the status directly and left `comment_updated` behind.
+      assert_activity_logged("comments.comment_approved",
+        resource_uuid: comment.uuid,
+        actor_uuid: moderator.uuid
+      )
+    end
+
+    test "bulk approve refuses a deleted comment instead of publishing it",
+         %{conn: conn, scope: scope, author: author} do
+      comment = comment_with_status(author, "deleted")
+      {:ok, view, _html} = live(put_test_scope(conn, scope), @path)
+
+      render_click(view, "bulk_approve", %{"uuids" => [comment.uuid]})
+
+      # The row menu hides Approve on a deleted comment for a reason:
+      # approving must never mean undeleting. Selecting the same row and
+      # using the always-visible bulk button published it anyway — the
+      # single-row swap this file was written for, still live one control over.
+      assert status_of(comment) == "deleted"
+      refute_activity_logged("comments.comment_approved", resource_uuid: comment.uuid)
+    end
+
+    test "bulk hide logs the hide, not a bare update",
+         %{conn: conn, scope: scope, moderator: moderator, author: author} do
+      comment = comment_with_status(author, "published")
+      {:ok, view, _html} = live(put_test_scope(conn, scope), @path)
+
+      render_click(view, "bulk_hide", %{"uuids" => [comment.uuid]})
+
+      assert status_of(comment) == "hidden"
+
+      assert_activity_logged("comments.comment_hidden",
+        resource_uuid: comment.uuid,
+        actor_uuid: moderator.uuid
+      )
+    end
+  end
+
   describe "status labels" do
     test "the badge renders the translated label, not the raw enum",
          %{conn: conn, scope: scope, author: author} do
       comment_with_status(author, "pending")
       {:ok, _view, html} = live(put_test_scope(conn, scope), @path)
 
-      # The filter dropdown and the stat tiles always used gettext; the badge
-      # printed the DB enum, so one page showed both spellings.
-      assert html =~ "Pending"
+      # Asserted on the BADGES, not on the page. The filter dropdown and the
+      # stat tiles on this same page always used gettext and already render
+      # "Pending", so `html =~ "Pending"` passed with the badge printing the
+      # raw enum — the exact regression this test is named for. Both surfaces
+      # (table cell and grid card) render one, and both must be translated.
+      labels =
+        ~r{<span class="badge badge-warning badge-sm">\s*([^<]*?)\s*</span>}
+        |> Regex.scan(html)
+        |> Enum.map(fn [_, label] -> label end)
+
+      assert labels != []
+
+      assert Enum.all?(labels, &(&1 == "Pending")),
+             "raw enum in a status badge: #{inspect(labels)}"
     end
   end
 end

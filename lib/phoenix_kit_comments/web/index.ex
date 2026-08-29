@@ -250,24 +250,39 @@ defmodule PhoenixKitComments.Web.Index do
     if uuids == [] do
       {:noreply, put_flash(socket, :error, gettext("No comments selected"))}
     else
-      {status, label} =
-        case action do
-          "approve" -> {"published", gettext("approved")}
-          "hide" -> {"hidden", gettext("hidden")}
-          "delete" -> {"deleted", gettext("deleted")}
-        end
+      opts = actor_opts(socket)
 
-      # `bulk_update_status/2` returns `{ok_count, error_count}` and all three
-      # branches used to throw it away and flash success unconditionally — so
-      # a bulk action where every row failed reported "Comments approved".
-      {ok_count, err_count} =
-        PhoenixKitComments.bulk_update_status(uuids, status, actor_opts(socket))
+      # Each bulk action goes through the SAME context function as its
+      # single-row menu item. Writing the status directly (the old
+      # `bulk_update_status(uuids, "published")`) skipped the moderation
+      # semantics that live in `approve_comment/2` and `hide_comment/2`: it
+      # logged `comment_updated` instead of the moderation action, and bulk
+      # Approve published deleted comments — the very thing the single-row
+      # menu refuses to offer, and the same swap this sweep fixed one screen
+      # over.
+      #
+      # All three return `{ok_count, error_count}`, which every branch used
+      # to throw away and flash success unconditionally — so a bulk action
+      # where every row failed still reported "Comments approved".
+      {{ok_count, err_count}, label} =
+        case action do
+          "approve" -> {PhoenixKitComments.bulk_approve(uuids, opts), gettext("approved")}
+          "hide" -> {PhoenixKitComments.bulk_hide(uuids, opts), gettext("hidden")}
+          "delete" -> {bulk_delete(uuids, opts), gettext("deleted")}
+        end
 
       socket = socket |> load_comments() |> reload_stats()
 
       {:noreply,
        put_flash(socket, bulk_flash_kind(err_count), bulk_message(ok_count, err_count, label))}
     end
+  end
+
+  # Delete already routed through `delete_comment/2` inside
+  # `bulk_update_status/3`; kept on that path so its soft-delete bookkeeping
+  # stays in one place.
+  defp bulk_delete(uuids, opts) do
+    PhoenixKitComments.bulk_update_status(uuids, "deleted", opts)
   end
 
   ## --- Private ---
