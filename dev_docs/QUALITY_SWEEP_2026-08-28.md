@@ -153,40 +153,47 @@ pins `~> 2.0`, so no core satisfying the pin lacks the callback.
 (`Test.HostLive`). It had none, which is why none of the above was caught
 here first.
 
+> **Status, 2026-08-29:** the post-merge review of #41 closed items 2 and 3
+> below and four of the "known gaps", and recorded why item 1 was left alone.
+> See `dev_docs/pull_requests/2026/41-comments-quality-sweep/CLAUDE_REVIEW.md`.
+
 ## Open — needs a decision
 
 1. **`:status` on `create_comment/4`.** Dropping it from the create cast would
    close the moderation bypass for hosts that forward user params, but it is a
    public API change and there are legitimate server-side callers. Documented
    as server-side-only for now.
-2. **Comment card actions are invisible on touch devices** (see PR #36's
+2. ~~**Comment card actions are invisible on touch devices** (see PR #36's
    `FOLLOW_UP.md`). Edit/Delete/Reply are `opacity-0` until `:hover`, which
-   touch never matches.
-3. **`giphy_search` is reachable by anonymous viewers** — it is not in
+   touch never matches.~~ Fixed with a `[@media(hover:none)]` variant.
+3. ~~**`giphy_search` is reachable by anonymous viewers** — it is not in
    `@write_events` and has no `can_post?` check, so a logged-out visitor can
    drive outbound calls against the host's Giphy quota with chosen query
    strings. The "toggle off" half of this was already fixed; the "not signed
-   in" half was not.
+   in" half was not.~~ Fixed: it now asks `can_post?` and is in `@write_events`.
 
 ## Open — known gaps, not yet done
 
-- **No LiveView tests exist at all** (no `Phoenix.LiveViewTest` anywhere in
+- ~~**No LiveView tests exist at all** (no `Phoenix.LiveViewTest` anywhere in
   `test/`). The approve/restore swap and the missing `actor_uuid` threading
   would both have been caught by one test that clicks a button and asserts on
   the resulting activity row's `action` **and** `actor_uuid`. This is the
   single biggest coverage gap and the C7/C10 work the playbook prescribes.
   Note `Activity.log/2` rescues `DBConnection.OwnershipError` to `:ok`, so
-  such tests need `shared: true` ownership or they pass vacuously.
-- **`actor_uuid` is not threaded** from `CommentsComponent`'s edit and delete
+  such tests need `shared: true` ownership or they pass vacuously.~~ Done in
+  #41 itself (`test/support/live_case.ex` and three integration files).
+- ~~**`actor_uuid` is not threaded** from `CommentsComponent`'s edit and delete
   paths, so the embedded thread — the path ordinary users take — logs "a
   comment was deleted" with nobody attached. The admin page threads it
-  correctly.
+  correctly.~~ Fixed, with tests asserting the actor on the resulting row.
 - **`bulk_update_status/3` writes a different audit action** than the
   single-row path for the same operation.
-- **Nothing logs on the `:error` branch** of a moderation action, and the
+- ~~**Nothing logs on the `:error` branch** of a moderation action, and the
   single-row handlers flash success unconditionally without checking the
   result — so a failed hide/delete leaves no trace anywhere and tells the
-  admin it worked.
+  admin it worked.~~ Fixed: all four route through one helper that flashes the
+  outcome and logs failures. Single-row Approve also refused a deleted comment
+  only in the bulk path; the rule moved into `approve_comment/2`.
 - **Twenty user-facing error strings** across four private message functions
   have zero test coverage; they want an `Errors` module with per-atom tests.
 - **Untested surfaces:** `escape_like_pattern/1` (a regression makes `%` a

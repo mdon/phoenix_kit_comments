@@ -9,6 +9,7 @@ defmodule PhoenixKitComments.Web.CommentsComponentTest do
   use PhoenixKitComments.LiveCase
 
   alias PhoenixKitComments.Comment
+  alias PhoenixKitComments.Web.CommentsComponent
 
   setup do
     PhoenixKit.Settings.update_boolean_setting_with_module("comments_enabled", true, "comments")
@@ -142,6 +143,102 @@ defmodule PhoenixKitComments.Web.CommentsComponentTest do
       # `:form_extras` is a documented feature. The drop must be surgical:
       # decoration keys only, not "client metadata is untrusted, discard it".
       assert comment.metadata["box_color"] == "#ff5555"
+    end
+  end
+
+  describe "the audit trail from an embedded thread" do
+    test "an edit records who made it", %{
+      conn: conn,
+      scope: scope,
+      user: user,
+      resource_uuid: resource_uuid
+    } do
+      {:ok, comment} =
+        PhoenixKitComments.create_comment("test_resource", resource_uuid, user.uuid, %{
+          content: "original"
+        })
+
+      {:ok, view, _html} = live(put_test_scope(conn, scope), host_path(resource_uuid))
+
+      view
+      |> element("button[phx-click='edit_comment'][phx-value-id='#{comment.uuid}']")
+      |> render_click()
+
+      view
+      |> element("form[phx-submit='save_edit']")
+      |> render_submit(%{"content" => "edited"})
+
+      assert Repo.get!(Comment, comment.uuid).content == "edited"
+
+      # The admin page has always passed the actor through; this path — the
+      # one ordinary users take — logged "a comment was edited" with nobody
+      # attached, which is the one question an audit row is asked.
+      assert_activity_logged("comments.comment_updated",
+        resource_uuid: comment.uuid,
+        actor_uuid: user.uuid
+      )
+    end
+
+    test "a delete records who made it", %{
+      conn: conn,
+      scope: scope,
+      user: user,
+      resource_uuid: resource_uuid
+    } do
+      {:ok, comment} =
+        PhoenixKitComments.create_comment("test_resource", resource_uuid, user.uuid, %{
+          content: "to be deleted"
+        })
+
+      {:ok, view, _html} = live(put_test_scope(conn, scope), host_path(resource_uuid))
+
+      view
+      |> element("button[phx-click='delete_comment'][phx-value-id='#{comment.uuid}']")
+      |> render_click()
+
+      assert Repo.get!(Comment, comment.uuid).status == "deleted"
+
+      assert_activity_logged("comments.comment_deleted",
+        resource_uuid: comment.uuid,
+        actor_uuid: user.uuid
+      )
+    end
+  end
+
+  # Socket-level on purpose. The picker never renders for a logged-out
+  # viewer, so the host page cannot show the difference between "refused"
+  # and "searched" — and letting the unguarded path run would put a real
+  # request to api.giphy.com in the suite, which is the very thing being
+  # prevented.
+  defp anonymous_socket do
+    %Phoenix.LiveView.Socket{
+      assigns: %{
+        __changed__: %{},
+        # The host said nothing, so the module's own switch decides; it is
+        # on for this suite.
+        host_enabled: nil,
+        can_post?: false,
+        giphy_query: "",
+        giphy_searching?: false
+      }
+    }
+  end
+
+  describe "the giphy picker" do
+    test "a logged-out viewer cannot spend the host's Giphy quota" do
+      assert {:noreply, socket} =
+               CommentsComponent.handle_event(
+                 "giphy_search",
+                 %{"value" => "cats"},
+                 anonymous_socket()
+               )
+
+      # Nothing started: no query recorded, no in-flight flag. The markup is
+      # not the control — the component's cid is addressable by anyone who
+      # can see the page, so an anonymous visitor could drive outbound calls
+      # with query strings of their choosing against the host's quota.
+      assert socket.assigns.giphy_query == ""
+      refute socket.assigns.giphy_searching?
     end
   end
 

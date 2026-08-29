@@ -1059,8 +1059,24 @@ defmodule PhoenixKitComments do
   # Moderation
   # ============================================================================
 
-  @doc "Sets a comment's status to published."
-  def approve_comment(%Comment{} = comment, opts \\ []) do
+  @doc """
+  Sets a comment's status to published.
+
+  Refuses a soft-deleted comment with `{:error, :comment_deleted}`: approving
+  must never mean undeleting. The row menu hides Approve on a deleted row for
+  that reason, and `bulk_approve/2` counted such rows as failures — but the
+  single-row handler took whatever uuid the event carried, so a replayed or
+  hand-made `approve` published a deleted comment anyway. The rule belongs
+  here, at the one place every caller goes through. Use `restore_comment/2`
+  to bring a deleted comment back.
+  """
+  @spec approve_comment(Comment.t(), keyword()) ::
+          {:ok, Comment.t()} | {:error, :comment_deleted | Ecto.Changeset.t()}
+  def approve_comment(comment, opts \\ [])
+
+  def approve_comment(%Comment{status: "deleted"}, _opts), do: {:error, :comment_deleted}
+
+  def approve_comment(%Comment{} = comment, opts) do
     comment
     # `log: false` so this writes ONE audit row, not a
     # `comments.comment_updated` from the inner call plus the approval.
@@ -1134,8 +1150,9 @@ defmodule PhoenixKitComments do
   directly, so it logs `comment_updated` rather than `comment_approved`, and
   it publishes DELETED comments — the single-row menu hides Approve on a
   deleted row precisely because "approve" must never mean "undelete".
-  Deleted rows are counted as failures here rather than silently skipped, so
-  the flash tells the truth about a mixed selection.
+  Deleted rows come back from `approve_comment/2` as `{:error,
+  :comment_deleted}` and are counted as failures rather than silently
+  skipped, so the flash tells the truth about a mixed selection.
 
   Returns `{approved_count, failed_count}`.
   """
@@ -1143,10 +1160,7 @@ defmodule PhoenixKitComments do
     comment_uuids
     |> load_for_bulk()
     |> Enum.reduce({0, 0}, fn comment, {ok, err} ->
-      case comment.status do
-        "deleted" -> {ok, err + 1}
-        _ -> tally(approve_comment(comment, opts), ok, err)
-      end
+      tally(approve_comment(comment, opts), ok, err)
     end)
   end
 

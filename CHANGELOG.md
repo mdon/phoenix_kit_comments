@@ -2,6 +2,154 @@
 
 All notable changes to PhoenixKitComments will be documented in this file.
 
+## 0.4.5 - 2026-08-29
+
+A quality sweep across the module (#41) and the post-merge review pass over
+it. Four of the fixes below close moderation and quota holes that a hidden
+control was the only thing standing in front of.
+
+### Fixed
+
+- **Approve and Restore were wired to each other's context functions**
+  (`Web.Index`). With moderation on, Approve called `restore_comment/2`,
+  which sets `pending` — so approving a pending comment did nothing while
+  flashing "Comment approved", in the one configuration where approving is
+  the point. Restore called `approve_comment/2` and published a deleted
+  comment that had never been approved, the exact bug `restore_comment/2`
+  exists to prevent. The audit trail was inverted to match.
+
+- **`approve_comment/2` now refuses a soft-deleted comment** with
+  `{:error, :comment_deleted}` — approving must never mean undeleting. The
+  row menu hides Approve on a deleted row and `bulk_approve/2` counted such
+  rows as failures, but the single-row handler took whatever uuid the event
+  carried, so a replayed `approve` published a deleted comment anyway. The
+  rule now lives at the one place every caller passes through; use
+  `restore_comment/2` to bring a deleted comment back.
+
+- **The four single-row moderation handlers reported success unconditionally.**
+  Approve/Hide/Delete/Restore discarded the context's return value and always
+  flashed "Comment approved". Since `Activity.log_comment/3` only logs its
+  `{:ok, _}` clause, a failed moderation left no audit row, no log line, and
+  told the admin it had worked. All four now route through one helper that
+  flashes the outcome and logs failures. The bulk path was given the same
+  treatment: each bulk action goes through the same context function as its
+  single-row menu item, so bulk Approve no longer publishes deleted comments
+  or logs `comment_updated` in place of the moderation action.
+
+- **`giphy_search` was reachable by a logged-out visitor**, who could drive
+  outbound calls to Giphy with query strings of their choosing against the
+  host's quota — the picker never renders for them, but the component's cid
+  is addressable by anyone who can see the page. It now asks the same
+  `can_post?` question `add_comment` does, and joins the module's write gate,
+  so a thread left open after an admin turned comments off can no longer bill
+  the host for searches either.
+
+- **`save_decoration` privilege escalation.** The permission check asked "do
+  you own this COMMENT?", while the host record it renames is selected by
+  looking the comment's own client-supplied `metadata` up in the host's
+  decorations map. Posting a comment with `metadata[annotation_uuid]` set to
+  someone else's record, then saving a decoration, renamed a record you have
+  no rights to. Decoration keys are now dropped from client-supplied metadata,
+  keyed on the new `decoration_keys` attr — a static declaration, because the
+  decorations registry is built from data and is empty in precisely the window
+  a planted comment needs. The `send_update` payload also carries `actor_uuid`
+  now, so the host can answer the question the component cannot.
+
+- **Six handlers crashed the host LiveView on a malformed payload** —
+  `update_comment_draft`, `giphy_search`, `add_comment` on `metadata=foo`, and
+  `toggle_like` / `toggle_dislike` / `reply_to` / `begin_decoration_edit`
+  reaching `to_string/1` on a map, closed at the one choke point
+  (`find_comment_in_tree/2`). `save_edit` took a non-binary body into
+  `String.trim/1`. `create_comment/4` raised on a malformed `parent_uuid`
+  instead of returning a changeset error.
+
+- **The JS hooks were dead on every LiveView navigation.** Both registered
+  themselves from an inline `<script>`, which works on a hard page load and
+  does nothing on a navigation: morphdom does not execute an inserted script
+  and the LiveSocket hooks map is fixed at construction. They now ship via
+  `js_sources/0` and are namespaced (`PhoenixKitCommentsInsertAtCursor`,
+  `PhoenixKitCommentsAudioRecorder`), since the fold into
+  `window.PhoenixKitHooks` is last-write-wins across every module's bundle.
+
+- **The module kill switch never reached embedded threads.** The component
+  defaulted `enabled` to `true`, so hosts embedding it without passing
+  `enabled=` kept accepting writes after an admin turned comments off — and
+  reading the setting into an assign was not enough either, because a
+  `phx-submit` reaches `handle_event/3` directly and `update/2` does not run
+  first. The gate now asks at event time.
+
+- **Edits and deletes made from an embedded thread recorded no actor.** The
+  admin page threaded `actor_uuid` into the activity log; the component's own
+  edit and delete paths passed no opts at all, so the path ordinary users take
+  logged "a comment was deleted" with nobody attached.
+
+- **Three "the database may be gone" guards only caught raises.** An unowned
+  checkout raises but a dead pool *exits*, so `enabled?/0`, `broadcast_change/3`
+  and `notify_resource_handler/4` did not hold in the case they were written
+  for — the last runs arbitrary host code after the comment has committed, so
+  an exiting handler killed the LiveView for a comment that saved fine. The
+  settings reads on the render path and the post-commit reaction hook got the
+  same treatment. `count_comments/3` and `count_all_comments/1` degraded to
+  zeros silently and now log.
+
+- **Role checks cost up to eight queries per comment, recursively per reply,
+  on every re-render** — hundreds of role queries per render on a fifty-comment
+  thread. Resolved once per update instead, and re-resolved rather than frozen,
+  so a host that mounts with `current_user: nil` and sends the user afterwards
+  no longer renders every comment for a stranger.
+
+- **`link_with_annotation/2`** appended a client-set `annotation_uuid` to an
+  href an admin clicks with no format check, so `?annotation=x&status=y` rode
+  along as extra query params. Now cast with `Ecto.UUID.cast/1`.
+
+- **Settings-save errors logged `Exception.message/1`**, and Ecto exceptions in
+  that class interpolate the offending value — which on that path can be the
+  Giphy API key. The struct name only, now.
+
+- **`approve_comment/2` and `hide_comment/2` wrote two audit rows each.**
+
+### Changed
+
+- **Comment card actions are reachable on touch devices.** Edit, Delete and
+  Reply are revealed by `group-hover`, which a device with no hover never
+  matches — so on a phone or tablet they rendered at zero opacity with no way
+  to reveal them. A `[@media(hover:none)]` variant now shows them at rest.
+  Nothing changes for a mouse.
+
+- **Status badges printed the raw DB enum** next to a filter dropdown showing
+  the translated word — a Russian admin saw "Опубликовано" in the filter and
+  "published" in the badge. Resource-type filter labels used
+  `String.capitalize/1`, rendering `Catalogue_item_supplier` where the
+  module's own `humanize_resource_type/1` renders `Catalogue Item Supplier`.
+
+- **`gettext("Edit")` had reached no catalogue at all** — renamed from
+  `"Edit comment"` and never re-extracted, so `et`/`ru` rendered English.
+  Invisible to a `.po`-vs-`.po` check by construction. Re-extracted, and the
+  fuzzy entries `mix gettext.merge` guessed wrong (ignored at runtime, so they
+  would have rendered English regardless) corrected by hand.
+
+- **`create_comment/4` documents `:status` as server-side only.** An explicit
+  `:status` overrides the moderation default, so a host forwarding raw user
+  params lets a commenter skip the queue. Behaviour unchanged — dropping it
+  from the cast is a breaking API change — but the hazard is now on record
+  beside `:inserted_at` and `:allow_empty_content`.
+
+- **`phx-disable-with`** added to Delete, Remove-resource-path and
+  Reset-defaults.
+
+### Added
+
+- **A LiveView test harness, and the first tests to use it.** The module had
+  no `Phoenix.LiveViewTest` anywhere: the approve/restore swap and the missing
+  actor threading were both invisible to a suite that only tested the context
+  functions, which were correct in isolation. Adds a test endpoint, router,
+  layouts and a host page that embeds `CommentsComponent` the way a consuming
+  app does, plus activity-log assertions. Note that `Activity.log/2` rescues
+  `DBConnection.OwnershipError` to `:ok`, so these run under a shared sandbox
+  or they would pass vacuously.
+
+- Dependency lockfile refresh (no source changes).
+
 ## 0.4.4 - 2026-08-28
 
 Comment forms get stable DOM ids so LiveView can recover them after a

@@ -82,6 +82,24 @@ defmodule PhoenixKitComments.Web.ModerationLiveTest do
       )
     end
 
+    test "refuses a deleted comment instead of publishing it",
+         %{conn: conn, scope: scope, author: author} do
+      comment = comment_with_status(author, "deleted")
+      {:ok, view, _html} = live(put_test_scope(conn, scope), @path)
+
+      # The row menu hides Approve on a deleted row, and the bulk path was
+      # taught to refuse one — but the single-row handler took whatever uuid
+      # the event carried and flashed success without looking at the result,
+      # so a replayed `approve` published a deleted comment and told the
+      # admin it had worked.
+      html = render_click(view, "approve", %{"uuid" => comment.uuid})
+
+      assert status_of(comment) == "deleted"
+      assert html =~ "Could not approve this comment"
+      refute html =~ "Comment approved"
+      refute_activity_logged("comments.comment_approved", resource_uuid: comment.uuid)
+    end
+
     test "writes exactly one audit row, not one per inner update",
          %{conn: conn, scope: scope, author: author} do
       comment = comment_with_status(author, "pending")

@@ -350,8 +350,13 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
   #
   # Reads are left alone: hiding a thread should not make the rows
   # unreadable to code that already has them.
+  #
+  # `giphy_search` is in here for the second reason as much as the first: it
+  # spends the HOST's Giphy quota on a client-chosen query string, so a
+  # thread left open after an admin turned comments off could still bill the
+  # host for searches.
   @write_events ~w(add_comment save_edit delete_comment toggle_like toggle_dislike
-                   save_decoration begin_decoration_edit)
+                   save_decoration begin_decoration_edit giphy_search)
 
   @impl true
   def handle_event(event, params, socket) when event in @write_events do
@@ -550,8 +555,17 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
 
   def handle_event("noop", _params, socket), do: {:noreply, socket}
 
-  @impl true
-  def handle_event("giphy_search", %{"value" => query}, socket) when is_binary(query) do
+  # Signed-in only. The picker never renders for a logged-out viewer, but the
+  # markup is not the control: the component's cid is addressable by anyone
+  # who can see the page, so an anonymous visitor could drive outbound calls
+  # against the host's Giphy quota with query strings of their choosing. The
+  # same question `add_comment` asks, asked here for the same reason.
+  def handle_event({:write, "giphy_search"}, _params, %{assigns: %{can_post?: false}} = socket) do
+    {:noreply, socket}
+  end
+
+  def handle_event({:write, "giphy_search"}, %{"value" => query}, socket)
+      when is_binary(query) do
     # Off the LiveView process. This called out to api.giphy.com INSIDE
     # `handle_event`, so a slow or unreachable Giphy blocked every other
     # event on the page — typing, likes, replies, navigation — for the full
@@ -567,7 +581,7 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
      |> start_async(:giphy_search, fn -> PhoenixKitComments.search_giphy(query) end)}
   end
 
-  def handle_event("giphy_search", _params, socket), do: {:noreply, socket}
+  def handle_event({:write, "giphy_search"}, _params, socket), do: {:noreply, socket}
 
   @impl true
   def handle_event("select_giphy", %{"id" => gif_id}, socket) do
@@ -1049,10 +1063,6 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
   defp create_error_message(:max_depth_exceeded), do: gettext("Reply nesting is too deep")
   defp create_error_message(:content_too_long), do: gettext("Comment exceeds maximum length")
   defp create_error_message(:invalid_user_uuid), do: gettext("Invalid user")
-
-  # Same wording as the write gate above, because it is the same refusal —
-  # reached when the switch was flipped after this page was rendered.
-  defp create_error_message(:module_disabled), do: gettext("Comments are turned off here.")
   defp create_error_message(:invalid_file_uuid), do: gettext("Invalid file attachment")
   defp create_error_message(_), do: gettext("Failed to add comment")
 
@@ -1103,7 +1113,14 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
   end
 
   defp do_update_comment(socket, comment, content) do
-    case PhoenixKitComments.update_comment(comment, %{content: content}) do
+    # Who edited it. `update_comment/3` forwards the actor keys to the
+    # activity log, and without one the trail reads "a comment was edited"
+    # with nobody attached — which is every edit made from an embedded
+    # thread, i.e. the path ordinary users take. The admin page has always
+    # threaded it; this one did not.
+    opts = [actor_uuid: actor_uuid(socket)]
+
+    case PhoenixKitComments.update_comment(comment, %{content: content}, opts) do
       {:ok, updated} ->
         # An edit that ADDS a mention pings; one that only reshuffles text
         # already mentioning someone pings nobody, because sync/4 returns
@@ -1136,7 +1153,10 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
   end
 
   defp execute_delete(socket, comment) do
-    case PhoenixKitComments.delete_comment(comment) do
+    # Same reason as `do_update_comment/3`: the deletion is logged either
+    # way, but an audit row without an actor cannot answer the one question
+    # asked of it.
+    case PhoenixKitComments.delete_comment(comment, actor_uuid: actor_uuid(socket)) do
       {:ok, _} ->
         send(
           self(),
@@ -1517,7 +1537,12 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
           <% may_edit = can_edit_comment?(@current_user, @comment, @ctx.viewer_is_admin?) %>
           <% may_delete = can_delete_comment?(@current_user, @comment, @ctx.viewer_is_admin?) %>
           <%= if may_edit or may_delete do %>
-            <div class="dropdown dropdown-end ml-auto shrink-0 opacity-0 group-hover/comment:opacity-100 focus-within:opacity-100 transition-opacity">
+            <%!-- `[@media(hover:none)]` is the touch escape hatch: a device --%>
+            <%!-- with no hover never matches `group-hover`, so Edit and     --%>
+            <%!-- Delete were unreachable on a phone or tablet — the control --%>
+            <%!-- rendered, at zero opacity, and nothing the user could do   --%>
+            <%!-- revealed it. Coarse pointers get the row at rest.          --%>
+            <div class="dropdown dropdown-end ml-auto shrink-0 opacity-0 group-hover/comment:opacity-100 focus-within:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">
               <div
                 tabindex="0"
                 role="button"
@@ -1633,7 +1658,7 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
                 <%= if @decoration.on_save do %>
                   <.icon
                     name="hero-pencil-square"
-                    class="w-3.5 h-3.5 opacity-0 group-hover:opacity-60 shrink-0 transition-opacity"
+                    class="w-3.5 h-3.5 opacity-0 group-hover:opacity-60 [@media(hover:none)]:opacity-60 shrink-0 transition-opacity"
                   />
                 <% end %>
               </div>
@@ -1784,7 +1809,7 @@ defmodule PhoenixKitComments.Web.CommentsComponent do
             phx-click="reply_to"
             phx-value-id={@comment.uuid}
             phx-target={@myself}
-            class="btn btn-ghost btn-xs opacity-0 group-hover/comment:opacity-100 focus-visible:opacity-100 transition-opacity"
+            class="btn btn-ghost btn-xs opacity-0 group-hover/comment:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity"
           >
             <.icon name="hero-arrow-uturn-left" class="w-4 h-4" /> {gettext("Reply")}
           </button>

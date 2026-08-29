@@ -16,6 +16,8 @@ defmodule PhoenixKitComments.Web.Index do
 
   import PhoenixKitComments.Web.Markdown, only: [comment_markdown: 1, comment_markdown_styles: 1]
 
+  require Logger
+
   alias PhoenixKit.Settings
   alias PhoenixKit.Users.Auth.Scope
   alias PhoenixKit.Utils.Routes
@@ -139,53 +141,26 @@ defmodule PhoenixKitComments.Web.Index do
 
   @impl true
   def handle_event("approve", %{"uuid" => uuid}, socket) do
-    with :ok <- check_authorization(socket),
-         %Comment{} = comment <- PhoenixKitComments.get_comment(uuid) do
-      PhoenixKitComments.approve_comment(comment, actor_opts(socket))
-
-      {:noreply,
-       socket
-       |> load_comments()
-       |> reload_stats()
-       |> put_flash(:info, gettext("Comment approved"))}
-    else
-      {:error, :unauthorized} -> {:noreply, put_flash(socket, :error, gettext("Not authorized"))}
-      nil -> {:noreply, put_flash(socket, :error, gettext("Comment not found"))}
-    end
+    moderate(socket, uuid, &PhoenixKitComments.approve_comment/2,
+      ok: gettext("Comment approved"),
+      error: gettext("Could not approve this comment")
+    )
   end
 
   @impl true
   def handle_event("hide", %{"uuid" => uuid}, socket) do
-    with :ok <- check_authorization(socket),
-         %Comment{} = comment <- PhoenixKitComments.get_comment(uuid) do
-      PhoenixKitComments.hide_comment(comment, actor_opts(socket))
-
-      {:noreply,
-       socket
-       |> load_comments()
-       |> reload_stats()
-       |> put_flash(:info, gettext("Comment hidden"))}
-    else
-      {:error, :unauthorized} -> {:noreply, put_flash(socket, :error, gettext("Not authorized"))}
-      nil -> {:noreply, put_flash(socket, :error, gettext("Comment not found"))}
-    end
+    moderate(socket, uuid, &PhoenixKitComments.hide_comment/2,
+      ok: gettext("Comment hidden"),
+      error: gettext("Could not hide this comment")
+    )
   end
 
   @impl true
   def handle_event("delete", %{"uuid" => uuid}, socket) do
-    with :ok <- check_authorization(socket),
-         %Comment{} = comment <- PhoenixKitComments.get_comment(uuid) do
-      PhoenixKitComments.delete_comment(comment, actor_opts(socket))
-
-      {:noreply,
-       socket
-       |> load_comments()
-       |> reload_stats()
-       |> put_flash(:info, gettext("Comment deleted"))}
-    else
-      {:error, :unauthorized} -> {:noreply, put_flash(socket, :error, gettext("Not authorized"))}
-      nil -> {:noreply, put_flash(socket, :error, gettext("Comment not found"))}
-    end
+    moderate(socket, uuid, &PhoenixKitComments.delete_comment/2,
+      ok: gettext("Comment deleted"),
+      error: gettext("Could not delete this comment")
+    )
   end
 
   # Revert a soft-deletion. Restoring publishes only where publishing is the
@@ -198,19 +173,10 @@ defmodule PhoenixKitComments.Web.Index do
   # `restore_comment/2` and did nothing at all under moderation).
   @impl true
   def handle_event("restore", %{"uuid" => uuid}, socket) do
-    with :ok <- check_authorization(socket),
-         %Comment{} = comment <- PhoenixKitComments.get_comment(uuid) do
-      PhoenixKitComments.restore_comment(comment, actor_opts(socket))
-
-      {:noreply,
-       socket
-       |> load_comments()
-       |> reload_stats()
-       |> put_flash(:info, gettext("Comment restored"))}
-    else
-      {:error, :unauthorized} -> {:noreply, put_flash(socket, :error, gettext("Not authorized"))}
-      nil -> {:noreply, put_flash(socket, :error, gettext("Comment not found"))}
-    end
+    moderate(socket, uuid, &PhoenixKitComments.restore_comment/2,
+      ok: gettext("Comment restored"),
+      error: gettext("Could not restore this comment")
+    )
   end
 
   @impl true
@@ -286,6 +252,47 @@ defmodule PhoenixKitComments.Web.Index do
   end
 
   ## --- Private ---
+
+  # Every single-row moderation action goes through here, for the reason the
+  # bulk path was given the same treatment one screen over: each of these
+  # four handlers threw the context's return value away and flashed success
+  # unconditionally. A refused or failed moderation therefore told the admin
+  # it had worked, and — `Activity.log_comment/3` only logs the `{:ok, _}`
+  # clause — left nothing behind to contradict it. Now the result decides the
+  # flash, and a failure is logged.
+  defp moderate(socket, uuid, fun, messages) do
+    with :ok <- check_authorization(socket),
+         %Comment{} = comment <- PhoenixKitComments.get_comment(uuid),
+         {:ok, _updated} <- fun.(comment, actor_opts(socket)) do
+      {:noreply,
+       socket
+       |> load_comments()
+       |> reload_stats()
+       |> put_flash(:info, Keyword.fetch!(messages, :ok))}
+    else
+      {:error, :unauthorized} ->
+        {:noreply, put_flash(socket, :error, gettext("Not authorized"))}
+
+      nil ->
+        {:noreply, put_flash(socket, :error, gettext("Comment not found"))}
+
+      {:error, reason} ->
+        Logger.warning("Comment moderation failed for #{uuid}: #{failure_reason(reason)}")
+
+        {:noreply,
+         socket
+         |> load_comments()
+         |> reload_stats()
+         |> put_flash(:error, Keyword.fetch!(messages, :error))}
+    end
+  end
+
+  # The changeset itself carries the comment body; `errors` carries the
+  # field, the message and the validation options and nothing else. Same
+  # reason the settings-save path logs a struct name rather than
+  # `Exception.message/1`.
+  defp failure_reason(%Ecto.Changeset{errors: errors}), do: inspect(errors)
+  defp failure_reason(reason), do: inspect(reason)
 
   defp assign_filter_defaults(socket) do
     socket
