@@ -44,34 +44,34 @@ msgstr "Kõik staatused"
 msgid "All Types"
 msgstr "Kõik tüübid"
 
-#: lib/phoenix_kit_comments/web/index.ex:683
+#: lib/phoenix_kit_comments/web/index.ex:675
 #: lib/phoenix_kit_comments/web/index.html.heex:200
 #, elixir-autogen, elixir-format
 msgid "Approve"
 msgstr "Kinnita"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1581
+#: lib/phoenix_kit_comments/web/comments_component.ex:1633
 #, elixir-autogen, elixir-format
 msgid "Are you sure you want to delete this comment?"
 msgstr "Kas oled kindel, et soovid selle kommentaari kustutada?"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:2323
-#: lib/phoenix_kit_comments/web/comments_component.ex:2324
+#: lib/phoenix_kit_comments/web/comments_component.ex:2397
+#: lib/phoenix_kit_comments/web/comments_component.ex:2398
 #, elixir-autogen, elixir-format
 msgid "Attach media"
 msgstr "Lisa meedia"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:2340
+#: lib/phoenix_kit_comments/web/comments_component.ex:2414
 #, elixir-autogen, elixir-format
 msgid "Attach media options"
 msgstr "Meedia lisamise valikud"
 
-#: lib/phoenix_kit_comments/web/index.ex:660
+#: lib/phoenix_kit_comments/web/index.ex:652
 #, elixir-autogen, elixir-format
 msgid "Attachment"
 msgstr "Manus"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1055
+#: lib/phoenix_kit_comments/web/comments_component.ex:1093
 #, elixir-autogen, elixir-format
 msgid "Attachments are disabled"
 msgstr "Manused on keelatud"
@@ -82,14 +82,14 @@ msgstr "Manused on keelatud"
 msgid "Author"
 msgstr "Autor"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1734
+#: lib/phoenix_kit_comments/web/comments_component.ex:1796
 #: lib/phoenix_kit_comments/web/settings.html.heex:425
 #: lib/phoenix_kit_comments/web/settings.html.heex:548
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Tühista"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:961
+#: lib/phoenix_kit_comments/web/comments_component.ex:931
 #, elixir-autogen, elixir-format
 msgid "Cannot react to a deleted comment"
 msgstr "Kustutatud kommentaarile ei saa reageerida"
@@ -106,7 +106,7 @@ msgstr "Tühjenda"
 msgid "Clear search"
 msgstr "Tühjenda otsing"
 
-#: lib/phoenix_kit_comments/web/index.ex:601
+#: lib/phoenix_kit_comments/web/index.ex:593
 #, elixir-autogen, elixir-format
 msgid "Click to read the full comment"
 msgstr "Klõpsa, et lugeda kogu kommentaari"
@@ -122,80 +122,80 @@ msgstr "Sulge"
 msgid "Comment"
 msgstr "Kommentaar"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1550
-#: lib/phoenix_kit_comments/web/index.ex:676
+#: lib/phoenix_kit_comments/web/comments_component.ex:1602
+#: lib/phoenix_kit_comments/web/index.ex:668
 #, elixir-autogen, elixir-format
 msgid "Comment actions"
 msgstr "Kommentaari toimingud"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1042
+#: lib/phoenix_kit_comments/web/comments_component.ex:1012
 #, elixir-autogen, elixir-format
 msgid "Comment added"
 msgstr "Kommentaar lisatud"
 
-#: lib/phoenix_kit_comments/web/index.ex:145
+#: lib/phoenix_kit_comments/web/index.ex:146
 #, elixir-autogen, elixir-format
 msgid "Comment approved"
 msgstr "Kommentaar kinnitatud"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1054
+#: lib/phoenix_kit_comments/web/comments_component.ex:1092
 #, elixir-autogen, elixir-format
 msgid "Comment can't be empty"
 msgstr "Kommentaar ei saa olla tühi"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1094
+#: lib/phoenix_kit_comments/web/comments_component.ex:1132
 #, elixir-autogen, elixir-format
 msgid "Comment cannot be empty"
 msgstr "Kommentaar ei saa olla tühi"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1174
-#: lib/phoenix_kit_comments/web/index.ex:161
+#: lib/phoenix_kit_comments/web/comments_component.ex:1212
+#: lib/phoenix_kit_comments/web/index.ex:162
 #, elixir-autogen, elixir-format
 msgid "Comment deleted"
 msgstr "Kommentaar kustutatud"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1064
+#: lib/phoenix_kit_comments/web/comments_component.ex:1102
 #, elixir-autogen, elixir-format
 msgid "Comment exceeds maximum length"
 msgstr "Kommentaar ületab maksimaalse pikkuse"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1101
+#: lib/phoenix_kit_comments/web/comments_component.ex:1139
 #, elixir-autogen, elixir-format
 msgid "Comment exceeds maximum length of %{max_length} characters"
 msgstr "Kommentaar ületab maksimaalse pikkuse %{max_length} tähemärki"
 
-#: lib/phoenix_kit_comments/web/index.ex:153
+#: lib/phoenix_kit_comments/web/index.ex:154
 #, elixir-autogen, elixir-format
 msgid "Comment hidden"
 msgstr "Kommentaar peidetud"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:645
-#: lib/phoenix_kit_comments/web/comments_component.ex:705
-#: lib/phoenix_kit_comments/web/comments_component.ex:781
-#: lib/phoenix_kit_comments/web/comments_component.ex:958
-#: lib/phoenix_kit_comments/web/index.ex:277
+#: lib/phoenix_kit_comments/web/comments_component.ex:613
+#: lib/phoenix_kit_comments/web/comments_component.ex:673
+#: lib/phoenix_kit_comments/web/comments_component.ex:749
+#: lib/phoenix_kit_comments/web/comments_component.ex:928
+#: lib/phoenix_kit_comments/web/index.ex:278
 #, elixir-autogen, elixir-format
 msgid "Comment not found"
 msgstr "Kommentaari ei leitud"
 
-#: lib/phoenix_kit_comments/web/index.ex:177
+#: lib/phoenix_kit_comments/web/index.ex:178
 #, elixir-autogen, elixir-format
 msgid "Comment restored"
 msgstr "Kommentaar taastatud"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1148
+#: lib/phoenix_kit_comments/web/comments_component.ex:1186
 #, elixir-autogen, elixir-format
 msgid "Comment updated"
 msgstr "Kommentaar uuendatud"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:180
-#: lib/phoenix_kit_comments/web/index.ex:54
+#: lib/phoenix_kit_comments/web/comments_component.ex:181
+#: lib/phoenix_kit_comments/web/index.ex:55
 #: lib/phoenix_kit_comments/web/settings.ex:45
 #, elixir-autogen, elixir-format
 msgid "Comments"
 msgstr "Kommentaarid"
 
-#: lib/phoenix_kit_comments/web/index.ex:71
+#: lib/phoenix_kit_comments/web/index.ex:72
 #, elixir-autogen, elixir-format
 msgid "Comments module is not enabled"
 msgstr "Kommentaaride moodul pole lubatud"
@@ -211,8 +211,8 @@ msgstr "Sisu"
 msgid "Date"
 msgstr "Kuupäev"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1584
-#: lib/phoenix_kit_comments/web/index.ex:712
+#: lib/phoenix_kit_comments/web/comments_component.ex:1636
+#: lib/phoenix_kit_comments/web/index.ex:704
 #: lib/phoenix_kit_comments/web/index.html.heex:211
 #, elixir-autogen, elixir-format
 msgid "Delete"
@@ -223,12 +223,12 @@ msgstr "Kustuta"
 msgid "Delete selected comments?"
 msgstr "Kustutada valitud kommentaarid?"
 
-#: lib/phoenix_kit_comments/web/index.ex:710
+#: lib/phoenix_kit_comments/web/index.ex:702
 #, elixir-autogen, elixir-format
 msgid "Delete this comment?"
 msgstr "Kustutada see kommentaar?"
 
-#: lib/phoenix_kit_comments/web/index.ex:754
+#: lib/phoenix_kit_comments/web/index.ex:746
 #: lib/phoenix_kit_comments/web/index.html.heex:26
 #: lib/phoenix_kit_comments/web/index.html.heex:99
 #: lib/phoenix_kit_comments/web/index.html.heex:167
@@ -243,71 +243,71 @@ msgstr "Kustutatud"
 msgid "Deleted user"
 msgstr "Kustutatud kasutaja"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1841
+#: lib/phoenix_kit_comments/web/comments_component.ex:1903
 #, elixir-autogen, elixir-format
 msgid "Dislike"
 msgstr "Ei meeldi"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1709
+#: lib/phoenix_kit_comments/web/comments_component.ex:1770
 #, elixir-autogen, elixir-format
 msgid "Edit your comment..."
 msgstr "Muuda oma kommentaari..."
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1045
-#: lib/phoenix_kit_comments/web/comments_component.ex:1067
+#: lib/phoenix_kit_comments/web/comments_component.ex:1015
+#: lib/phoenix_kit_comments/web/comments_component.ex:1105
 #, elixir-autogen, elixir-format
 msgid "Failed to add comment"
 msgstr "Kommentaari lisamine ebaõnnestus"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1177
+#: lib/phoenix_kit_comments/web/comments_component.ex:1215
 #, elixir-autogen, elixir-format
 msgid "Failed to delete comment"
 msgstr "Kommentaari kustutamine ebaõnnestus"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1151
+#: lib/phoenix_kit_comments/web/comments_component.ex:1189
 #, elixir-autogen, elixir-format
 msgid "Failed to update comment"
 msgstr "Kommentaari uuendamine ebaõnnestus"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:975
+#: lib/phoenix_kit_comments/web/comments_component.ex:945
 #, elixir-autogen, elixir-format
 msgid "Failed to update reaction"
 msgstr "Reaktsiooni uuendamine ebaõnnestus"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:2045
+#: lib/phoenix_kit_comments/web/comments_component.ex:2107
 #, elixir-autogen, elixir-format
 msgid "File too large"
 msgstr "Fail on liiga suur"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:2047
+#: lib/phoenix_kit_comments/web/comments_component.ex:2109
 #, elixir-autogen, elixir-format
 msgid "File type not allowed"
 msgstr "Failitüüp pole lubatud"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1779
-#: lib/phoenix_kit_comments/web/comments_component.ex:2248
-#: lib/phoenix_kit_comments/web/comments_component.ex:2352
-#: lib/phoenix_kit_comments/web/index.ex:660
+#: lib/phoenix_kit_comments/web/comments_component.ex:1841
+#: lib/phoenix_kit_comments/web/comments_component.ex:2322
+#: lib/phoenix_kit_comments/web/comments_component.ex:2426
+#: lib/phoenix_kit_comments/web/index.ex:652
 #, elixir-autogen, elixir-format
 msgid "GIF"
 msgstr "GIF"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:2432
+#: lib/phoenix_kit_comments/web/comments_component.ex:2506
 #, elixir-autogen, elixir-format
 msgid "GIF results"
 msgstr "GIF-tulemused"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:2405
+#: lib/phoenix_kit_comments/web/comments_component.ex:2479
 #, elixir-autogen, elixir-format
 msgid "Giphy picker"
 msgstr "Giphy valija"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1219
+#: lib/phoenix_kit_comments/web/comments_component.ex:1266
 #, elixir-autogen, elixir-format
 msgid "Giphy search failed. Check the API key in settings."
 msgstr "Giphy otsing ebaõnnestus. Kontrolli API võtit seadetes."
 
-#: lib/phoenix_kit_comments/web/index.ex:753
+#: lib/phoenix_kit_comments/web/index.ex:745
 #: lib/phoenix_kit_comments/web/index.html.heex:22
 #: lib/phoenix_kit_comments/web/index.html.heex:96
 #: lib/phoenix_kit_comments/web/index.html.heex:164
@@ -315,40 +315,40 @@ msgstr "Giphy otsing ebaõnnestus. Kontrolli API võtit seadetes."
 msgid "Hidden"
 msgstr "Peidetud"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:2481
-#: lib/phoenix_kit_comments/web/index.ex:692
+#: lib/phoenix_kit_comments/web/comments_component.ex:2555
+#: lib/phoenix_kit_comments/web/index.ex:684
 #: lib/phoenix_kit_comments/web/index.html.heex:203
 #, elixir-autogen, elixir-format
 msgid "Hide"
 msgstr "Peida"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:2372
+#: lib/phoenix_kit_comments/web/comments_component.ex:2446
 #, elixir-autogen, elixir-format
 msgid "Image"
 msgstr "Pilt"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1074
-#: lib/phoenix_kit_comments/web/comments_component.ex:1251
+#: lib/phoenix_kit_comments/web/comments_component.ex:1112
+#: lib/phoenix_kit_comments/web/comments_component.ex:1298
 #, elixir-autogen, elixir-format
 msgid "Invalid comment for this resource"
 msgstr "Sellele ressursile sobimatu kommentaar"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1066
+#: lib/phoenix_kit_comments/web/comments_component.ex:1104
 #, elixir-autogen, elixir-format
 msgid "Invalid file attachment"
 msgstr "Sobimatu failimanus"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1065
+#: lib/phoenix_kit_comments/web/comments_component.ex:1103
 #, elixir-autogen, elixir-format
 msgid "Invalid user"
 msgstr "Sobimatu kasutaja"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1824
+#: lib/phoenix_kit_comments/web/comments_component.ex:1886
 #, elixir-autogen, elixir-format
 msgid "Like"
 msgstr "Meeldib"
 
-#: lib/phoenix_kit_comments/web/index.ex:55
+#: lib/phoenix_kit_comments/web/index.ex:56
 #, elixir-autogen, elixir-format
 msgid "Moderate comments across all content"
 msgstr "Modereeri kommentaare kogu sisus"
@@ -358,7 +358,7 @@ msgstr "Modereeri kommentaare kogu sisus"
 msgid "No comments found"
 msgstr "Kommentaare ei leitud"
 
-#: lib/phoenix_kit_comments/web/index.ex:217
+#: lib/phoenix_kit_comments/web/index.ex:218
 #, elixir-autogen, elixir-format
 msgid "No comments selected"
 msgstr "Ühtegi kommentaari pole valitud"
@@ -368,16 +368,16 @@ msgstr "Ühtegi kommentaari pole valitud"
 msgid "No comments yet. Be the first to comment!"
 msgstr "Kommentaare veel pole. Ole esimene!"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:2461
+#: lib/phoenix_kit_comments/web/comments_component.ex:2535
 #, elixir-autogen, elixir-format
 msgid "No results."
 msgstr "Tulemusi pole."
 
-#: lib/phoenix_kit_comments/web/index.ex:133
-#: lib/phoenix_kit_comments/web/index.ex:186
-#: lib/phoenix_kit_comments/web/index.ex:197
-#: lib/phoenix_kit_comments/web/index.ex:208
-#: lib/phoenix_kit_comments/web/index.ex:274
+#: lib/phoenix_kit_comments/web/index.ex:134
+#: lib/phoenix_kit_comments/web/index.ex:187
+#: lib/phoenix_kit_comments/web/index.ex:198
+#: lib/phoenix_kit_comments/web/index.ex:209
+#: lib/phoenix_kit_comments/web/index.ex:275
 #: lib/phoenix_kit_comments/web/settings.ex:81
 #: lib/phoenix_kit_comments/web/settings.ex:92
 #: lib/phoenix_kit_comments/web/settings.ex:103
@@ -387,8 +387,8 @@ msgstr "Tulemusi pole."
 msgid "Not authorized"
 msgstr "Puuduvad õigused"
 
-#: lib/phoenix_kit_comments.ex:148
-#: lib/phoenix_kit_comments/web/index.ex:752
+#: lib/phoenix_kit_comments.ex:174
+#: lib/phoenix_kit_comments/web/index.ex:744
 #: lib/phoenix_kit_comments/web/index.html.heex:18
 #: lib/phoenix_kit_comments/web/index.html.heex:93
 #: lib/phoenix_kit_comments/web/index.html.heex:161
@@ -396,18 +396,18 @@ msgstr "Puuduvad õigused"
 msgid "Pending"
 msgstr "Ootel"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:2530
+#: lib/phoenix_kit_comments/web/comments_component.ex:2604
 #, elixir-autogen, elixir-format
 msgid "Post Comment"
 msgstr "Lisa kommentaar"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1867
+#: lib/phoenix_kit_comments/web/comments_component.ex:1929
 #, elixir-autogen, elixir-format
 msgid "Post Reply"
 msgstr "Saada vastus"
 
-#: lib/phoenix_kit_comments.ex:147
-#: lib/phoenix_kit_comments/web/index.ex:751
+#: lib/phoenix_kit_comments.ex:173
+#: lib/phoenix_kit_comments/web/index.ex:743
 #: lib/phoenix_kit_comments/web/index.html.heex:14
 #: lib/phoenix_kit_comments/web/index.html.heex:90
 #: lib/phoenix_kit_comments/web/index.html.heex:158
@@ -415,44 +415,44 @@ msgstr "Saada vastus"
 msgid "Published"
 msgstr "Avaldatud"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1767
-#: lib/phoenix_kit_comments/web/index.ex:628
+#: lib/phoenix_kit_comments/web/comments_component.ex:1829
+#: lib/phoenix_kit_comments/web/index.ex:620
 #, elixir-autogen, elixir-format
 msgid "Read more"
 msgstr "Loe edasi"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:2385
+#: lib/phoenix_kit_comments/web/comments_component.ex:2459
 #, elixir-autogen, elixir-format
 msgid "Record"
 msgstr "Salvesta"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:2282
+#: lib/phoenix_kit_comments/web/comments_component.ex:2356
 #, elixir-autogen, elixir-format
 msgid "Remove %{name}"
 msgstr "Eemalda %{name}"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:2254
+#: lib/phoenix_kit_comments/web/comments_component.ex:2328
 #, elixir-autogen, elixir-format
 msgid "Remove GIF"
 msgstr "Eemalda GIF"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1814
-#: lib/phoenix_kit_comments/web/index.ex:563
+#: lib/phoenix_kit_comments/web/comments_component.ex:1876
+#: lib/phoenix_kit_comments/web/index.ex:555
 #, elixir-autogen, elixir-format
 msgid "Reply"
 msgstr "Vasta"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1063
+#: lib/phoenix_kit_comments/web/comments_component.ex:1101
 #, elixir-autogen, elixir-format
 msgid "Reply nesting is too deep"
 msgstr "Vastuste pesastus on liiga sügav"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1857
+#: lib/phoenix_kit_comments/web/comments_component.ex:1919
 #, elixir-autogen, elixir-format
 msgid "Replying here"
 msgstr "Vastamine siia"
 
-#: lib/phoenix_kit_comments/web/index.ex:549
+#: lib/phoenix_kit_comments/web/index.ex:541
 #: lib/phoenix_kit_comments/web/index.html.heex:271
 #, elixir-autogen, elixir-format
 msgid "Resource"
@@ -466,12 +466,12 @@ msgstr "Ressurss"
 msgid "Resource Type"
 msgstr "Ressursi tüüp"
 
-#: lib/phoenix_kit_comments/web/index.ex:701
+#: lib/phoenix_kit_comments/web/index.ex:693
 #, elixir-autogen, elixir-format
 msgid "Restore"
 msgstr "Taasta"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1741
+#: lib/phoenix_kit_comments/web/comments_component.ex:1803
 #: lib/phoenix_kit_comments/web/settings.html.heex:429
 #: lib/phoenix_kit_comments/web/settings.html.heex:552
 #, elixir-autogen, elixir-format
@@ -484,13 +484,13 @@ msgstr "Salvesta"
 msgid "Search"
 msgstr "Otsi"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:2409
-#: lib/phoenix_kit_comments/web/comments_component.ex:2417
+#: lib/phoenix_kit_comments/web/comments_component.ex:2483
+#: lib/phoenix_kit_comments/web/comments_component.ex:2491
 #, elixir-autogen, elixir-format
 msgid "Search GIFs"
 msgstr "Otsi GIF-e"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:2416
+#: lib/phoenix_kit_comments/web/comments_component.ex:2490
 #, elixir-autogen, elixir-format
 msgid "Search GIFs..."
 msgstr "Otsi GIF-e..."
@@ -501,7 +501,7 @@ msgstr "Otsi GIF-e..."
 msgid "Search comment content..."
 msgstr "Otsi kommentaaride sisust..."
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:2439
+#: lib/phoenix_kit_comments/web/comments_component.ex:2513
 #, elixir-autogen, elixir-format
 msgid "Select GIF %{id}"
 msgstr "Vali GIF %{id}"
@@ -512,27 +512,27 @@ msgstr "Vali GIF %{id}"
 msgid "Settings"
 msgstr "Seaded"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1767
+#: lib/phoenix_kit_comments/web/comments_component.ex:1829
 #, elixir-autogen, elixir-format
 msgid "Show less"
 msgstr "Näita vähem"
 
-#: lib/phoenix_kit_comments/web/index.ex:570
+#: lib/phoenix_kit_comments/web/index.ex:562
 #, elixir-autogen, elixir-format
 msgid "Show the original comment"
 msgstr "Näita algset kommentaari"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:382
+#: lib/phoenix_kit_comments/web/comments_component.ex:383
 #, elixir-autogen, elixir-format
 msgid "Sign in to post a comment"
 msgstr "Kommentaari lisamiseks logi sisse"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:2520
+#: lib/phoenix_kit_comments/web/comments_component.ex:2594
 #, elixir-autogen, elixir-format
 msgid "Sign in to post a comment."
 msgstr "Kommentaari lisamiseks logi sisse."
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:952
+#: lib/phoenix_kit_comments/web/comments_component.ex:922
 #, elixir-autogen, elixir-format
 msgid "Sign in to react to comments"
 msgstr "Kommentaaridele reageerimiseks logi sisse"
@@ -545,101 +545,101 @@ msgstr "Kommentaaridele reageerimiseks logi sisse"
 msgid "Status"
 msgstr "Staatus"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:2308
-#: lib/phoenix_kit_comments/web/comments_component.ex:2312
+#: lib/phoenix_kit_comments/web/comments_component.ex:2382
+#: lib/phoenix_kit_comments/web/comments_component.ex:2386
 #, elixir-autogen, elixir-format
 msgid "Stop recording"
 msgstr "Peata salvestamine"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1692
+#: lib/phoenix_kit_comments/web/comments_component.ex:1744
 #, elixir-autogen, elixir-format
 msgid "Title"
 msgstr "Pealkiri"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:2046
+#: lib/phoenix_kit_comments/web/comments_component.ex:2108
 #, elixir-autogen, elixir-format
 msgid "Too many files"
 msgstr "Liiga palju faile"
 
-#: lib/phoenix_kit_comments.ex:146
+#: lib/phoenix_kit_comments.ex:172
 #: lib/phoenix_kit_comments/web/index.html.heex:10
 #, elixir-autogen, elixir-format
 msgid "Total"
 msgstr "Kokku"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:2457
+#: lib/phoenix_kit_comments/web/comments_component.ex:2531
 #, elixir-autogen, elixir-format
 msgid "Type a search term to find GIFs."
 msgstr "Sisesta otsingusõna GIF-ide leidmiseks."
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1530
-#: lib/phoenix_kit_comments/web/comments_component.ex:2614
+#: lib/phoenix_kit_comments/web/comments_component.ex:1582
+#: lib/phoenix_kit_comments/web/comments_component.ex:2688
 #, elixir-autogen, elixir-format
 msgid "Unknown"
 msgstr "Tundmatu"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1059
+#: lib/phoenix_kit_comments/web/comments_component.ex:1097
 #, elixir-autogen, elixir-format
 msgid "Up to %{count} attachments per comment"
 msgstr "Kuni %{count} manust kommentaari kohta"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:2366
+#: lib/phoenix_kit_comments/web/comments_component.ex:2440
 #, elixir-autogen, elixir-format
 msgid "Up to %{count} files, max %{size}MB each"
 msgstr "Kuni %{count} faili, igaüks kuni %{size} MB"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:2050
+#: lib/phoenix_kit_comments/web/comments_component.ex:2112
 #, elixir-autogen, elixir-format
 msgid "Upload error: %{reason}"
 msgstr "Üleslaadimise viga: %{reason}"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:2529
+#: lib/phoenix_kit_comments/web/comments_component.ex:2603
 #, elixir-autogen, elixir-format
 msgid "Write a comment..."
 msgstr "Kirjuta kommentaar..."
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1866
+#: lib/phoenix_kit_comments/web/comments_component.ex:1928
 #, elixir-autogen, elixir-format
 msgid "Write a reply..."
 msgstr "Kirjuta vastus..."
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:2543
+#: lib/phoenix_kit_comments/web/comments_component.ex:2617
 #, elixir-autogen, elixir-format
 msgid "Write comment"
 msgstr "Kirjuta kommentaar"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1078
+#: lib/phoenix_kit_comments/web/comments_component.ex:1116
 #, elixir-autogen, elixir-format
 msgid "You don't have permission to delete this comment"
 msgstr "Sul pole õigust seda kommentaari kustutada"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:664
-#: lib/phoenix_kit_comments/web/comments_component.ex:1108
+#: lib/phoenix_kit_comments/web/comments_component.ex:632
+#: lib/phoenix_kit_comments/web/comments_component.ex:1146
 #, elixir-autogen, elixir-format
 msgid "You don't have permission to edit this comment"
 msgstr "Sul pole õigust seda kommentaari muuta"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1942
+#: lib/phoenix_kit_comments/web/comments_component.ex:2004
 #, elixir-autogen, elixir-format
 msgid "Your browser does not support audio playback."
 msgstr "Sinu brauser ei toeta heli esitamist."
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1931
+#: lib/phoenix_kit_comments/web/comments_component.ex:1993
 #, elixir-autogen, elixir-format
 msgid "Your browser does not support video playback."
 msgstr "Sinu brauser ei toeta video esitamist."
 
-#: lib/phoenix_kit_comments/web/index.ex:584
+#: lib/phoenix_kit_comments/web/index.ex:576
 #, elixir-autogen, elixir-format
 msgid "[no text]"
 msgstr "[tekst puudub]"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1518
+#: lib/phoenix_kit_comments/web/comments_component.ex:1570
 #, elixir-autogen, elixir-format
 msgid "[removed]"
 msgstr "[eemaldatud]"
 
-#: lib/phoenix_kit_comments/web/index.ex:572
+#: lib/phoenix_kit_comments/web/index.ex:564
 #, elixir-autogen, elixir-format
 msgid "— Re: %{snippet}"
 msgstr "— Re: %{snippet}"
@@ -957,75 +957,75 @@ msgstr "nt shoes"
 msgid "or add manually"
 msgstr "või lisa käsitsi"
 
-#: lib/phoenix_kit_comments/web/index.ex:390
+#: lib/phoenix_kit_comments/web/index.ex:391
 #, elixir-autogen, elixir-format
 msgid "%{count} comment %{action}"
 msgid_plural "%{count} comments %{action}"
 msgstr[0] "%{count} kommentaar %{action}"
 msgstr[1] "%{count} kommentaari %{action}"
 
-#: lib/phoenix_kit_comments/web/index.ex:397
+#: lib/phoenix_kit_comments/web/index.ex:398
 #, elixir-autogen, elixir-format
 msgid "%{count} comment could not be %{action}"
 msgid_plural "%{count} comments could not be %{action}"
 msgstr[0] "%{count} kommentaar %{action}"
 msgstr[1] "%{count} kommentaari %{action}"
 
-#: lib/phoenix_kit_comments/web/index.ex:407
+#: lib/phoenix_kit_comments/web/index.ex:408
 #, elixir-autogen, elixir-format
 msgid "%{ok} %{action}, %{failed} failed"
 msgstr "%{ok} %{action}, ebaõnnestus: %{failed}"
 
-#: lib/phoenix_kit_comments/web/index.ex:680
+#: lib/phoenix_kit_comments/web/index.ex:672
 #: lib/phoenix_kit_comments/web/index.html.heex:199
 #, elixir-autogen, elixir-format
 msgid "Approving…"
 msgstr "Kinnitamine…"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:377
+#: lib/phoenix_kit_comments/web/comments_component.ex:378
 #, elixir-autogen, elixir-format
 msgid "Comments are turned off here."
 msgstr "Kommentaarid on siin välja lülitatud."
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1243
+#: lib/phoenix_kit_comments/web/comments_component.ex:1290
 #, elixir-autogen, elixir-format
 msgid "Could not start recording."
 msgstr "Salvestamist ei õnnestunud alustada."
 
-#: lib/phoenix_kit_comments/web/index.ex:709
+#: lib/phoenix_kit_comments/web/index.ex:701
 #: lib/phoenix_kit_comments/web/index.html.heex:207
 #, elixir-autogen, elixir-format
 msgid "Deleting…"
 msgstr "Kustutamine…"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1244
+#: lib/phoenix_kit_comments/web/comments_component.ex:1291
 #, elixir-autogen, elixir-format
 msgid "Failed to attach the recording."
 msgstr "Salvestise lisamine ebaõnnestus."
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1216
+#: lib/phoenix_kit_comments/web/comments_component.ex:1263
 #, elixir-autogen, elixir-format
 msgid "GIFs are turned off here."
 msgstr "GIF-id on siin välja lülitatud."
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1213
-#: lib/phoenix_kit_comments/web/comments_component.ex:1221
+#: lib/phoenix_kit_comments/web/comments_component.ex:1260
+#: lib/phoenix_kit_comments/web/comments_component.ex:1268
 #, elixir-autogen, elixir-format
 msgid "Giphy search failed. Please try again."
 msgstr "Giphy otsing ebaõnnestus. Proovi uuesti."
 
-#: lib/phoenix_kit_comments/web/index.ex:689
+#: lib/phoenix_kit_comments/web/index.ex:681
 #: lib/phoenix_kit_comments/web/index.html.heex:202
 #, elixir-autogen, elixir-format
 msgid "Hiding…"
 msgstr "Peitmine…"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1240
+#: lib/phoenix_kit_comments/web/comments_component.ex:1287
 #, elixir-autogen, elixir-format
 msgid "Microphone access is not supported by this browser."
 msgstr "See brauser ei toeta mikrofoni kasutamist."
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1242
+#: lib/phoenix_kit_comments/web/comments_component.ex:1289
 #, elixir-autogen, elixir-format
 msgid "Microphone permission denied."
 msgstr "Mikrofoni luba keelati."
@@ -1050,17 +1050,17 @@ msgstr "Teekonna mall peab sisaldama :uuid või :metadata.KEY kohatäidet"
 msgid "Path template must start with / or :prefix"
 msgstr "Teekonna mall peab algama / või :prefix-iga"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:2218
+#: lib/phoenix_kit_comments/web/comments_component.ex:2292
 #, elixir-autogen, elixir-format
 msgid "Post as %{project}"
 msgstr "Postita kui %{project}"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:2489
+#: lib/phoenix_kit_comments/web/comments_component.ex:2563
 #, elixir-autogen, elixir-format
 msgid "Posting…"
 msgstr "Postitamine…"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1245
+#: lib/phoenix_kit_comments/web/comments_component.ex:1292
 #, elixir-autogen, elixir-format
 msgid "Recording failed. Please try again."
 msgstr "Salvestamine ebaõnnestus. Proovi uuesti."
@@ -1070,13 +1070,13 @@ msgstr "Salvestamine ebaõnnestus. Proovi uuesti."
 msgid "Resource type is required"
 msgstr "Ressursi tüüp on kohustuslik"
 
-#: lib/phoenix_kit_comments/web/index.ex:698
+#: lib/phoenix_kit_comments/web/index.ex:690
 #, elixir-autogen, elixir-format
 msgid "Restoring…"
 msgstr "Taastamine…"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1628
-#: lib/phoenix_kit_comments/web/comments_component.ex:1738
+#: lib/phoenix_kit_comments/web/comments_component.ex:1680
+#: lib/phoenix_kit_comments/web/comments_component.ex:1800
 #: lib/phoenix_kit_comments/web/settings.html.heex:289
 #: lib/phoenix_kit_comments/web/settings.html.heex:428
 #: lib/phoenix_kit_comments/web/settings.html.heex:551
@@ -1091,22 +1091,22 @@ msgstr "Salvestamine..."
 msgid "Select all comments"
 msgstr "Vali kõik kommentaarid"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:2188
+#: lib/phoenix_kit_comments/web/comments_component.ex:2261
 #, elixir-autogen, elixir-format
 msgid "Type @ to mention someone, # to link a record."
 msgstr "Kirjuta @, et kedagi mainida, # et kirjele viidata."
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1322
+#: lib/phoenix_kit_comments/web/comments_component.ex:1374
 #, elixir-autogen, elixir-format
 msgid "Upload failed. Please try again."
 msgstr "Üleslaadimine ebaõnnestus. Proovi uuesti."
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:443
+#: lib/phoenix_kit_comments/web/comments_component.ex:1063
 #, elixir-autogen, elixir-format
 msgid "Wait for uploads to finish."
 msgstr "Oota, kuni üleslaadimine lõpeb."
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1258
+#: lib/phoenix_kit_comments/web/comments_component.ex:1305
 #, elixir-autogen, elixir-format
 msgid "You cannot edit this comment"
 msgstr "Sa ei saa seda kommentaari muuta"
@@ -1116,22 +1116,22 @@ msgstr "Sa ei saa seda kommentaari muuta"
 msgid "You do not have access to comments settings."
 msgstr "Sul puudub ligipääs kommentaaride seadetele."
 
-#: lib/phoenix_kit_comments/web/index.ex:45
+#: lib/phoenix_kit_comments/web/index.ex:46
 #, elixir-autogen, elixir-format
 msgid "You do not have access to comments."
 msgstr "Sul puudub ligipääs kommentaaridele."
 
-#: lib/phoenix_kit_comments/web/index.ex:235
+#: lib/phoenix_kit_comments/web/index.ex:236
 #, elixir-autogen, elixir-format
 msgid "approved"
 msgstr "Kinnitatud"
 
-#: lib/phoenix_kit_comments/web/index.ex:237
+#: lib/phoenix_kit_comments/web/index.ex:238
 #, elixir-autogen, elixir-format
 msgid "deleted"
 msgstr "Kustutatud"
 
-#: lib/phoenix_kit_comments/web/index.ex:236
+#: lib/phoenix_kit_comments/web/index.ex:237
 #, elixir-autogen, elixir-format
 msgid "hidden"
 msgstr "Peidetud"
@@ -1151,12 +1151,12 @@ msgstr "Näide: %{simple} või %{prefixed}"
 msgid "Use %{uuid} for the resource ID, %{metadata} for values from comment metadata, and %{prefix} to include the site URL prefix."
 msgstr "Kasuta %{uuid} ressursi ID jaoks, %{metadata} kommentaari metaandmete väärtuste jaoks ja %{prefix}, et lisada saidi URL-i eesliide."
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1577
+#: lib/phoenix_kit_comments/web/comments_component.ex:1629
 #, elixir-autogen, elixir-format
 msgid "Deleting..."
 msgstr "Kustutamine…"
 
-#: lib/phoenix_kit_comments/web/comments_component.ex:1571
+#: lib/phoenix_kit_comments/web/comments_component.ex:1623
 #, elixir-autogen, elixir-format
 msgid "Edit"
 msgstr "Muuda"
@@ -1172,22 +1172,42 @@ msgstr "Eemaldamine…"
 msgid "Resetting..."
 msgstr "Lähtestamine…"
 
-#: lib/phoenix_kit_comments/web/index.ex:146
+#: lib/phoenix_kit_comments/web/index.ex:147
 #, elixir-autogen, elixir-format
 msgid "Could not approve this comment"
 msgstr "Kommentaari ei õnnestunud heaks kiita"
 
-#: lib/phoenix_kit_comments/web/index.ex:162
+#: lib/phoenix_kit_comments/web/index.ex:163
 #, elixir-autogen, elixir-format
 msgid "Could not delete this comment"
 msgstr "Kommentaari ei õnnestunud kustutada"
 
-#: lib/phoenix_kit_comments/web/index.ex:154
+#: lib/phoenix_kit_comments/web/index.ex:155
 #, elixir-autogen, elixir-format
 msgid "Could not hide this comment"
 msgstr "Kommentaari ei õnnestunud peita"
 
-#: lib/phoenix_kit_comments/web/index.ex:178
+#: lib/phoenix_kit_comments/web/index.ex:179
 #, elixir-autogen, elixir-format
 msgid "Could not restore this comment"
 msgstr "Kommentaari ei õnnestunud taastada"
+
+#: lib/phoenix_kit_comments/web/comments_component.ex:1072
+#, elixir-autogen, elixir-format
+msgid "Files can't be added while editing a comment. Add them to a new comment."
+msgstr "Kommentaari muutmisel ei saa faile lisada. Lisa need uude kommentaari."
+
+#: lib/phoenix_kit_comments/web/comments_component.ex:1078
+#, elixir-autogen, elixir-format
+msgid "Files can't be attached to comments here."
+msgstr "Siin ei saa kommentaaridele faile lisada."
+
+#: lib/phoenix_kit_comments/web/comments_component.ex:1090
+#, elixir-autogen, elixir-format
+msgid "Images can't be pasted into the text. Paste the image again to attach it."
+msgstr "Pilte ei saa teksti sisse kleepida. Kleebi pilt uuesti, et see manusena lisada."
+
+#: lib/phoenix_kit_comments/web/comments_component.ex:1075
+#, elixir-autogen, elixir-format
+msgid "The pasted file could not be attached. Try the attach button."
+msgstr "Kleebitud faili ei õnnestunud lisada. Proovi manuse nuppu."
